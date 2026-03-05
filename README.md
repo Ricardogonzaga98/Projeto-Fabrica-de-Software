@@ -5,3 +5,4 @@ Nome : Matheus Gangini
 Nome : Adler Koneski
 Nome : Guilherme 
 Nome : Kaio Terra
+Nome : Isaque Bersalim
