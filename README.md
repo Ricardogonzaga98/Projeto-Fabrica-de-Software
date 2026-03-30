@@ -70,4 +70,10 @@ O script está em:
 
 ## 👥 Equipe
 
-(Preencher nomes)
+Luiz Ricardo - Product Owner
+João Nilton - Scrum Master
+Adler koneski- Desenvolvedor
+Isaque  - Responsável por QA/Testes
+Matheus Boleta - Responsável por Documentação
+Kaio - Desenvolvedor
+Guilherme - Desenvolver 
