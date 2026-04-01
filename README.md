@@ -42,12 +42,54 @@ Garantir rastreabilidade, organização e consulta eficiente dos documentos rece
 ```bash
 cd backend
 npm install
+# Configure o banco de dados MySQL e execute o schema.sql
 npm start
 ```
 
 ### Frontend
 
 ```bash
+cd frontend
+# Abra o index.html no navegador ou use um servidor local
+```
+
+## 🧪 Testes
+
+```bash
+cd backend
+npm test
+```
+
+## 📚 Documentação
+
+* [Planejamento](docs/planejamento.md)
+* [API Documentation](docs/api.md) (em desenvolvimento)
+
+## 🔧 Tecnologias Utilizadas
+
+* **Backend**: Node.js, Express.js, MySQL, JWT, bcrypt
+* **Frontend**: HTML5, CSS3, JavaScript (ES6+)
+* **Banco de Dados**: MySQL
+* **Testes**: Jest, Supertest
+* **Linting**: ESLint
+
+## 📋 Pré-requisitos
+
+* Node.js (v14+)
+* MySQL Server
+* Navegador web moderno
+
+## 🤝 Contribuição
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Commit suas mudanças (`git commit -am 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nova-feature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 cd frontend
 npm install
 npm start

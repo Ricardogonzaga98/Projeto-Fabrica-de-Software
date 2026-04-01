@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Controle de Entrada de Documentos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>SCED - Sistema de Controle de Entrada de Documentos</h1>
+    <nav id="nav">
+      <button id="login-btn">Login</button>
+      <button id="register-btn">Registrar</button>
+    </nav>
+  </header>
+
+  <main id="main-content">
+    <section id="login-section" class="hidden">
+      <h2>Login</h2>
+      <form id="login-form">
+        <input type="email" id="login-email" placeholder="Email" required>
+        <input type="password" id="login-password" placeholder="Senha" required>
+        <button type="submit">Entrar</button>
+      </form>
+    </section>
+
+    <section id="register-section" class="hidden">
+      <h2>Registro de Usuário</h2>
+      <form id="register-form">
+        <input type="text" id="register-name" placeholder="Nome" required>
+        <input type="email" id="register-email" placeholder="Email" required>
+        <input type="password" id="register-password" placeholder="Senha" required>
+        <select id="register-role">
+          <option value="operator">Operador</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <button type="submit">Registrar</button>
+      </form>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <h2>Painel de Controle</h2>
+      <nav>
+        <button id="documents-btn">Documentos</button>
+        <button id="reports-btn">Relatórios</button>
+        <button id="logout-btn">Sair</button>
+      </nav>
+
+      <div id="documents-section">
+        <h3>Documentos</h3>
+        <button id="new-document-btn">Novo Documento</button>
+        <table id="documents-table">
+          <thead>
+            <tr>
+              <th>Protocolo</th>
+              <th>Tipo</th>
+              <th>Remetente</th>
+              <th>Assunto</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="documents-tbody">
+            <!-- Documentos serão carregados aqui -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
