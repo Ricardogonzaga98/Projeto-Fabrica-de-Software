@@ -47,24 +47,21 @@
         <button id="logout-btn">Sair</button>
       </nav>
 
-      <div id="documents-section">
-        <h3>Documentos</h3>
-        <button id="new-document-btn">Novo Documento</button>
-        <table id="documents-table">
-          <thead>
-            <tr>
-              <th>Protocolo</th>
-              <th>Tipo</th>
-              <th>Remetente</th>
-              <th>Assunto</th>
-              <th>Status</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="documents-tbody">
-            <!-- Documentos serão carregados aqui -->
-          </tbody>
-        </table>
+      <div id="new-document-section" class="hidden">
+        <h3>Novo Documento</h3>
+        <form id="new-document-form">
+          <select id="doc-type" required>
+            <option value="">Selecione o tipo</option>
+          </select>
+          <input type="date" id="doc-date" required>
+          <input type="text" id="doc-sender" placeholder="Remetente" required>
+          <input type="text" id="doc-subject" placeholder="Assunto" required>
+          <input type="text" id="doc-sector" placeholder="Setor de destino">
+          <input type="text" id="doc-responsible" placeholder="Responsável">
+          <textarea id="doc-observations" placeholder="Observações"></textarea>
+          <button type="submit">Criar Documento</button>
+          <button type="button" onclick="cancelNewDocument()">Cancelar</button>
+        </form>
       </div>
     </section>
   </main>

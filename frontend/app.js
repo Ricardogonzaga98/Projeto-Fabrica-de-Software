@@ -12,9 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const dashboard = document.getElementById('dashboard');
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
-  const documentsBtn = document.getElementById('documents-btn');
   const newDocumentBtn = document.getElementById('new-document-btn');
-  const documentsTbody = document.getElementById('documents-tbody');
+  const newDocumentSection = document.getElementById('new-document-section');
+  const newDocumentForm = document.getElementById('new-document-form');
+  const docTypeSelect = document.getElementById('doc-type');
 
   // Estado da aplicação
   let currentUser = null;
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   registerForm.addEventListener('submit', handleRegister);
   documentsBtn.addEventListener('click', showDocuments);
   newDocumentBtn.addEventListener('click', showNewDocumentForm);
+  newDocumentForm.addEventListener('submit', handleNewDocument);
 
   // Funções de navegação
   function showLogin() {
@@ -76,8 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('token', token);
         currentUser = data.user;
         showDashboard();
+        loadDocuments();
       } else {
-        alert('Erro no login: ' + data.message);
+        alert('Erro no login: ' + (data.error || data.message));
       }
     } catch (error) {
       console.error('Erro:', error);
@@ -104,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Usuário registrado com sucesso!');
         showLogin();
       } else {
-        alert('Erro no registro: ' + data.message);
+        alert('Erro no registro: ' + (data.error || data.message));
       }
     } catch (error) {
       console.error('Erro:', error);
@@ -127,8 +130,12 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      const documents = await response.json();
-      displayDocuments(documents);
+      const data = await response.json();
+      if (response.ok) {
+        displayDocuments(data.documents);
+      } else {
+        alert('Erro ao carregar documentos: ' + (data.error || data.message));
+      }
     } catch (error) {
       console.error('Erro ao carregar documentos:', error);
     }
@@ -140,34 +147,116 @@ document.addEventListener('DOMContentLoaded', () => {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${doc.protocol}</td>
-        <td>${doc.type}</td>
+        <td>${doc.type_name || 'N/A'}</td>
         <td>${doc.sender}</td>
         <td>${doc.subject}</td>
         <td>${doc.status}</td>
         <td>
           <button onclick="viewDocument(${doc.id})">Ver</button>
-          <button onclick="editDocument(${doc.id})">Editar</button>
+          <button onclick="editStatus(${doc.id})">Editar Status</button>
         </td>
       `;
       documentsTbody.appendChild(row);
     });
   }
 
-  function showDocuments() {
-    // Já está na seção de documentos
+  async function loadDocumentTypes() {
+    try {
+      const response = await fetch(`${API_BASE}/document-types`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const types = await response.json();
+      if (response.ok) {
+        docTypeSelect.innerHTML = '<option value="">Selecione o tipo</option>';
+        types.forEach(type => {
+          const option = document.createElement('option');
+          option.value = type.id;
+          option.textContent = type.name;
+          docTypeSelect.appendChild(option);
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar tipos:', error);
+    }
   }
 
-  function showNewDocumentForm() {
-    // Implementar formulário de novo documento
-    alert('Funcionalidade de novo documento em desenvolvimento');
+  async function handleNewDocument(e) {
+    e.preventDefault();
+    const formData = {
+      type_id: document.getElementById('doc-type').value,
+      received_date: document.getElementById('doc-date').value,
+      sender: document.getElementById('doc-sender').value,
+      subject: document.getElementById('doc-subject').value,
+      destination_sector: document.getElementById('doc-sector').value,
+      responsible: document.getElementById('doc-responsible').value,
+      observations: document.getElementById('doc-observations').value
+    };
+
+    try {
+      const response = await fetch(`${API_BASE}/documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert(`Documento criado com sucesso! Protocolo: ${data.protocol}`);
+        cancelNewDocument();
+        loadDocuments();
+      } else {
+        alert('Erro: ' + (data.error || data.message));
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+    }
   }
 
   // Funções globais para botões na tabela
-  window.viewDocument = (id) => {
-    alert(`Visualizar documento ${id}`);
+  window.viewDocument = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE}/documents/${id}/history`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const history = await response.json();
+      if (response.ok) {
+        alert(`Histórico do documento ${id}:\n${history.map(h => `${h.created_at}: ${h.action} - ${h.new_status}`).join('\n')}`);
+      } else {
+        alert('Erro ao carregar histórico');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+    }
   };
 
-  window.editDocument = (id) => {
-    alert(`Editar documento ${id}`);
+  window.editStatus = async (id) => {
+    const newStatus = prompt('Novo status (recebido, em_analise, encaminhado, finalizado):');
+    if (!newStatus) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/documents/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert('Status atualizado!');
+        loadDocuments();
+      } else {
+        alert('Erro: ' + (data.error || data.message));
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+    }
   };
+
+  window.cancelNewDocument = cancelNewDocument;
 });
