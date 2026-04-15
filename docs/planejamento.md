@@ -42,3 +42,19 @@ O Sistema de Controle de Entrada de Documentos (SCED) tem como objetivo centrali
 - Facilidade na busca de informações
 - Aumento da rastreabilidade
 - Melhoria na eficiência dos processos internos
+
+# Objetivo do Sistema SCED
+
+Desenvolver um sistema web para gerenciar de forma eficiente a entrada e o acompanhamento de documentos em uma instituição.
+
+## Objetivos Específicos
+
+- Garantir registro padronizado e seguro dos documentos
+- Facilitar a consulta e recuperação de informações
+- Permitir o acompanhamento do ciclo de vida dos documentos
+- Reduzir erros operacionais
+- Melhorar o controle interno
+
+## Resultado Esperado
+
+Um sistema confiável, organizado e eficiente, capaz de substituir o controle manual atualmente utilizado.
