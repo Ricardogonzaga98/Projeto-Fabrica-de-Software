@@ -59,3 +59,25 @@ O sistema SCED terá como foco principal o controle de entrada e acompanhamento 
 ## Considerações
 
 Essas funcionalidades representam o escopo mínimo necessário para atender ao problema identificado.
+
+# Escopo do Sistema - O que NÃO entra
+
+Para manter o foco e viabilidade do projeto dentro do prazo, algumas funcionalidades não serão contempladas nesta versão do sistema.
+
+## Funcionalidades Fora do Escopo
+
+- Integração com outros sistemas externos
+- Assinatura digital de documentos
+- Workflow avançado de aprovação
+- Notificações por e-mail ou SMS
+- Aplicativo mobile
+- Dashboard com gráficos avançados (opcional)
+- Geração automática de documentos em PDF (opcional)
+- Inteligência artificial para análise de documentos
+- Controle de permissões altamente granular
+
+## Justificativa
+
+Essas funcionalidades foram consideradas fora do escopo por aumentarem significativamente a complexidade do sistema e não serem essenciais para resolver o problema principal.
+
+Elas podem ser consideradas como melhorias futuras.
