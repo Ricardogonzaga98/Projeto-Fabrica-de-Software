@@ -19,3 +19,43 @@ Funcionalidades avançadas como integrações externas, automações complexas e
 ## Validação
 
 O escopo foi definido com base nos requisitos do projeto e validado pela equipe, garantindo foco no problema principal e viabilidade de entrega dentro do prazo.
+
+# Escopo do Sistema - O que entra
+
+O sistema SCED terá como foco principal o controle de entrada e acompanhamento de documentos dentro da instituição.
+
+## Funcionalidades Inclusas
+
+- Cadastro de usuários (Administrador e Operador)
+- Autenticação (login)
+- Cadastro de tipos de documentos
+- Registro de entrada de documentos contendo:
+  - Número de protocolo automático
+  - Tipo de documento
+  - Data de recebimento
+  - Remetente
+  - Assunto
+  - Setor de destino
+  - Responsável
+  - Observações
+  - Anexo opcional
+
+- Consulta de documentos com filtros:
+  - Protocolo
+  - Remetente
+  - Tipo
+  - Período
+
+- Controle de status dos documentos:
+  - Recebido
+  - Em análise
+  - Encaminhado
+  - Finalizado
+
+- Histórico de movimentação dos documentos
+
+- Relatórios simples com filtros
+
+## Considerações
+
+Essas funcionalidades representam o escopo mínimo necessário para atender ao problema identificado.
