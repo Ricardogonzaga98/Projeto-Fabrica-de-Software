@@ -3,68 +3,418 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Controle de Entrada de Documentos</title>
+  <title>SCED - Sistema de Controle de Entrada de Documentos</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <h1>SCED - Sistema de Controle de Entrada de Documentos</h1>
-    <nav id="nav">
-      <button id="login-btn">Login</button>
-      <button id="register-btn">Registrar</button>
-    </nav>
+
+  <!-- HEADER -->
+  <header id="header" class="hidden">
+    <div class="header-left">
+      <span class="logo">📄 SCED</span>
+      <span class="header-title">Sistema de Controle de Entrada de Documentos</span>
+    </div>
+    <div class="header-right">
+      <span id="header-user-name" class="user-info"></span>
+      <span id="header-user-role" class="user-role"></span>
+      <button id="logout-btn" class="btn btn-danger-outline">Sair</button>
+    </div>
   </header>
 
-  <main id="main-content">
-    <section id="login-section" class="hidden">
-      <h2>Login</h2>
-      <form id="login-form">
-        <input type="email" id="login-email" placeholder="Email" required>
-        <input type="password" id="login-password" placeholder="Senha" required>
-        <button type="submit">Entrar</button>
-      </form>
+  <!-- SIDEBAR -->
+  <div id="sidebar" class="hidden">
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">🏠</span> Dashboard
+      </button>
+      <button class="nav-item" data-page="documents">
+        <span class="nav-icon">📋</span> Documentos
+      </button>
+      <button class="nav-item" data-page="new-document">
+        <span class="nav-icon">➕</span> Novo Documento
+      </button>
+      <button class="nav-item" data-page="consult">
+        <span class="nav-icon">🔍</span> Consulta
+      </button>
+      <button class="nav-item" data-page="reports">
+        <span class="nav-icon">📊</span> Relatórios
+      </button>
+      <button class="nav-item admin-only hidden" data-page="admin">
+        <span class="nav-icon">⚙️</span> Administração
+      </button>
+    </nav>
+  </div>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main id="main">
+
+    <!-- TELA DE LOGIN -->
+    <section id="page-login" class="page auth-page">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="auth-logo">📄</div>
+          <h1>SCED</h1>
+          <p>Sistema de Controle de Entrada de Documentos</p>
+        </div>
+        <form id="login-form" novalidate>
+          <div class="form-group">
+            <label for="login-email">E-mail</label>
+            <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Senha</label>
+            <input type="password" id="login-password" placeholder="••••••" autocomplete="current-password" required>
+          </div>
+          <div id="login-error" class="alert alert-danger hidden"></div>
+          <button type="submit" id="login-submit" class="btn btn-primary btn-full">Entrar</button>
+        </form>
+        <div class="auth-hint">
+          <small>Admin padrão: <strong>admin@sced.com</strong> / <strong>admin123</strong></small>
+        </div>
+      </div>
     </section>
 
-    <section id="register-section" class="hidden">
-      <h2>Registro de Usuário</h2>
-      <form id="register-form">
-        <input type="text" id="register-name" placeholder="Nome" required>
-        <input type="email" id="register-email" placeholder="Email" required>
-        <input type="password" id="register-password" placeholder="Senha" required>
-        <select id="register-role">
-          <option value="operator">Operador</option>
-          <option value="admin">Administrador</option>
+    <!-- DASHBOARD -->
+    <section id="page-dashboard" class="page hidden">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number" id="stat-total">–</div>
+          <div class="stat-label">Total de Documentos</div>
+        </div>
+        <div class="stat-card stat-recebido">
+          <div class="stat-number" id="stat-recebido">–</div>
+          <div class="stat-label">Recebidos</div>
+        </div>
+        <div class="stat-card stat-analise">
+          <div class="stat-number" id="stat-analise">–</div>
+          <div class="stat-label">Em Análise</div>
+        </div>
+        <div class="stat-card stat-finalizado">
+          <div class="stat-number" id="stat-finalizado">–</div>
+          <div class="stat-label">Finalizados</div>
+        </div>
+      </div>
+      <div class="dashboard-recent">
+        <h3>Documentos Recentes</h3>
+        <div id="dashboard-table-wrap"></div>
+      </div>
+    </section>
+
+    <!-- LISTAGEM DE DOCUMENTOS -->
+    <section id="page-documents" class="page hidden">
+      <div class="page-header">
+        <h2>Documentos</h2>
+        <button class="btn btn-primary" onclick="goToPage('new-document')">+ Novo Documento</button>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="filter-protocol" placeholder="Protocolo" class="filter-input">
+        <input type="text" id="filter-sender" placeholder="Remetente" class="filter-input">
+        <select id="filter-type" class="filter-input">
+          <option value="">Tipo</option>
         </select>
-        <button type="submit">Registrar</button>
-      </form>
+        <select id="filter-status" class="filter-input">
+          <option value="">Status</option>
+          <option value="recebido">Recebido</option>
+          <option value="em_analise">Em Análise</option>
+          <option value="encaminhado">Encaminhado</option>
+          <option value="finalizado">Finalizado</option>
+        </select>
+        <button class="btn btn-primary" onclick="applyFilters()">🔍 Filtrar</button>
+        <button class="btn btn-secondary" onclick="clearFilters()">✕ Limpar</button>
+      </div>
+      <div class="table-wrap">
+        <table id="documents-table">
+          <thead>
+            <tr>
+              <th>Protocolo</th>
+              <th>Tipo</th>
+              <th>Remetente</th>
+              <th>Assunto</th>
+              <th>Status</th>
+              <th>Data</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="documents-tbody"></tbody>
+        </table>
+        <div id="documents-empty" class="empty-state hidden">Nenhum documento encontrado.</div>
+      </div>
+      <div id="pagination" class="pagination"></div>
     </section>
 
-    <section id="dashboard" class="hidden">
-      <h2>Painel de Controle</h2>
-      <nav>
-        <button id="documents-btn">Documentos</button>
-        <button id="reports-btn">Relatórios</button>
-        <button id="logout-btn">Sair</button>
-      </nav>
-
-      <div id="new-document-section" class="hidden">
-        <h3>Novo Documento</h3>
-        <form id="new-document-form">
-          <select id="doc-type" required>
-            <option value="">Selecione o tipo</option>
-          </select>
-          <input type="date" id="doc-date" required>
-          <input type="text" id="doc-sender" placeholder="Remetente" required>
-          <input type="text" id="doc-subject" placeholder="Assunto" required>
-          <input type="text" id="doc-sector" placeholder="Setor de destino">
-          <input type="text" id="doc-responsible" placeholder="Responsável">
-          <textarea id="doc-observations" placeholder="Observações"></textarea>
-          <button type="submit">Criar Documento</button>
-          <button type="button" onclick="cancelNewDocument()">Cancelar</button>
+    <!-- NOVO DOCUMENTO -->
+    <section id="page-new-document" class="page hidden">
+      <div class="page-header">
+        <h2>Registrar Novo Documento</h2>
+        <button class="btn btn-secondary" onclick="goToPage('documents')">← Voltar</button>
+      </div>
+      <div class="form-card">
+        <form id="new-document-form" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="doc-type">Tipo de Documento</label>
+              <select id="doc-type">
+                <option value="">Selecione o tipo</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="doc-date">Data de Recebimento *</label>
+              <input type="date" id="doc-date" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="doc-sender">Remetente *</label>
+              <input type="text" id="doc-sender" placeholder="Nome do remetente" required>
+            </div>
+            <div class="form-group">
+              <label for="doc-sector">Setor de Destino</label>
+              <input type="text" id="doc-sector" placeholder="Setor responsável">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="doc-subject">Assunto *</label>
+            <input type="text" id="doc-subject" placeholder="Descreva o assunto do documento" required>
+          </div>
+          <div class="form-group">
+            <label for="doc-responsible">Responsável</label>
+            <input type="text" id="doc-responsible" placeholder="Nome do responsável">
+          </div>
+          <div class="form-group">
+            <label for="doc-observations">Observações</label>
+            <textarea id="doc-observations" rows="3" placeholder="Observações adicionais (opcional)"></textarea>
+          </div>
+          <div id="new-doc-error" class="alert alert-danger hidden"></div>
+          <div id="new-doc-success" class="alert alert-success hidden"></div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">💾 Registrar Documento</button>
+            <button type="button" class="btn btn-secondary" onclick="resetNewDocumentForm()">Limpar</button>
+          </div>
         </form>
       </div>
     </section>
+
+    <!-- CONSULTA -->
+    <section id="page-consult" class="page hidden">
+      <div class="page-header">
+        <h2>Consulta de Documentos</h2>
+      </div>
+      <div class="filter-bar vertical">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Protocolo</label>
+            <input type="text" id="consult-protocol" placeholder="SCED-..." class="filter-input">
+          </div>
+          <div class="form-group">
+            <label>Remetente</label>
+            <input type="text" id="consult-sender" class="filter-input">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="consult-type" class="filter-input">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="consult-status" class="filter-input">
+              <option value="">Todos</option>
+              <option value="recebido">Recebido</option>
+              <option value="em_analise">Em Análise</option>
+              <option value="encaminhado">Encaminhado</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data início</label>
+            <input type="date" id="consult-start" class="filter-input">
+          </div>
+          <div class="form-group">
+            <label>Data fim</label>
+            <input type="date" id="consult-end" class="filter-input">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="runConsult()">🔍 Consultar</button>
+          <button class="btn btn-secondary" onclick="clearConsult()">✕ Limpar</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="consult-table">
+          <thead>
+            <tr>
+              <th>Protocolo</th>
+              <th>Tipo</th>
+              <th>Remetente</th>
+              <th>Assunto</th>
+              <th>Status</th>
+              <th>Data</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="consult-tbody"></tbody>
+        </table>
+        <div id="consult-empty" class="empty-state hidden">Use os filtros acima para consultar documentos.</div>
+      </div>
+    </section>
+
+    <!-- RELATÓRIOS -->
+    <section id="page-reports" class="page hidden">
+      <div class="page-header">
+        <h2>Relatórios</h2>
+      </div>
+      <div class="filter-bar vertical">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Status</label>
+            <select id="report-status" class="filter-input">
+              <option value="">Todos</option>
+              <option value="recebido">Recebido</option>
+              <option value="em_analise">Em Análise</option>
+              <option value="encaminhado">Encaminhado</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="report-type" class="filter-input">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data início</label>
+            <input type="date" id="report-start" class="filter-input">
+          </div>
+          <div class="form-group">
+            <label>Data fim</label>
+            <input type="date" id="report-end" class="filter-input">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="generateReport()">📊 Gerar Relatório</button>
+          <button class="btn btn-success" onclick="exportCSV()">⬇️ Exportar CSV</button>
+        </div>
+      </div>
+      <div id="report-summary" class="stats-grid hidden">
+        <div class="stat-card"><div class="stat-number" id="rep-total">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-card stat-recebido"><div class="stat-number" id="rep-recebido">0</div><div class="stat-label">Recebidos</div></div>
+        <div class="stat-card stat-analise"><div class="stat-number" id="rep-analise">0</div><div class="stat-label">Em Análise</div></div>
+        <div class="stat-card stat-finalizado"><div class="stat-number" id="rep-finalizado">0</div><div class="stat-label">Finalizados</div></div>
+      </div>
+      <div class="table-wrap">
+        <table id="report-table" class="hidden">
+          <thead>
+            <tr>
+              <th>Protocolo</th><th>Tipo</th><th>Remetente</th>
+              <th>Assunto</th><th>Status</th><th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="report-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ADMINISTRAÇÃO -->
+    <section id="page-admin" class="page hidden">
+      <div class="page-header">
+        <h2>Administração</h2>
+      </div>
+      <div class="admin-grid">
+        <div class="admin-card">
+          <h3>Tipos de Documento</h3>
+          <div class="form-row">
+            <input type="text" id="new-type-name" placeholder="Nome do tipo" class="filter-input">
+            <input type="text" id="new-type-desc" placeholder="Descrição (opcional)" class="filter-input">
+            <button class="btn btn-primary" onclick="createDocumentType()">Adicionar</button>
+          </div>
+          <div id="admin-types-error" class="alert alert-danger hidden"></div>
+          <ul id="types-list" class="types-list"></ul>
+        </div>
+        <div class="admin-card">
+          <h3>Cadastrar Usuário</h3>
+          <form id="register-form" novalidate>
+            <div class="form-group">
+              <label>Nome</label>
+              <input type="text" id="reg-name" placeholder="Nome completo" required>
+            </div>
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="email" id="reg-email" placeholder="email@exemplo.com" required>
+            </div>
+            <div class="form-group">
+              <label>Senha</label>
+              <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required>
+            </div>
+            <div class="form-group">
+              <label>Perfil</label>
+              <select id="reg-role">
+                <option value="operator">Operador</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+            <div id="register-error" class="alert alert-danger hidden"></div>
+            <div id="register-success" class="alert alert-success hidden"></div>
+            <button type="submit" class="btn btn-primary">Cadastrar Usuário</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
   </main>
+
+  <!-- MODAL DETALHES / HISTÓRICO -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="modal-title">Detalhes do Documento</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL STATUS -->
+  <div id="status-modal-overlay" class="modal-overlay hidden" onclick="closeStatusModal()">
+    <div class="modal modal-sm" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Alterar Status</h3>
+        <button class="modal-close" onclick="closeStatusModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="status-doc-id">
+        <div class="form-group">
+          <label>Protocolo</label>
+          <input type="text" id="status-doc-protocol" readonly class="readonly">
+        </div>
+        <div class="form-group">
+          <label>Novo Status</label>
+          <select id="status-new">
+            <option value="recebido">Recebido</option>
+            <option value="em_analise">Em Análise</option>
+            <option value="encaminhado">Encaminhado</option>
+            <option value="finalizado">Finalizado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Observação (opcional)</label>
+          <textarea id="status-notes" rows="2" placeholder="Motivo da alteração..."></textarea>
+        </div>
+        <div id="status-error" class="alert alert-danger hidden"></div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="confirmStatusChange()">Confirmar</button>
+          <button class="btn btn-secondary" onclick="closeStatusModal()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast hidden"></div>
 
   <script src="app.js"></script>
 </body>
