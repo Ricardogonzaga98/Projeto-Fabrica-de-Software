@@ -7,115 +7,162 @@ Nome : Guilherme
 Nome : Kaio Terra
 Nome : Isaque Bersalim
 
-# 📌 Sistema de Controle de Entrada de Documentos
+# SCED — Sistema de Controle de Entrada de Documentos
 
-## 📖 Descrição
+Sistema web para controle e rastreamento de documentos oficiais, desenvolvido como projeto da Fábrica de Software.
 
-Sistema web desenvolvido para gerenciar a entrada de documentos em uma instituição pública, substituindo o controle manual por planilhas.
+## 🏗️ Arquitetura
+sced/
 
-## 🎯 Objetivo
+├── backend/
 
-Garantir rastreabilidade, organização e consulta eficiente dos documentos recebidos.
+│   ├── app.js               # Aplicação Express (exportável para testes)
 
-## ⚙️ Funcionalidades
+│   ├── server.js            # Ponto de entrada (inicia o servidor)
 
-* Cadastro de usuários (Admin e Operador)
-* Login com autenticação
-* Cadastro de tipos de documentos
-* Registro de entrada de documentos
-* Consulta com filtros
-* Alteração de status
-* Histórico de movimentação
-* Relatórios
+│   ├── config/
+
+│   │   └── database.js      # Conexão MySQL
+
+│   ├── middleware/
+
+│   │   └── auth.js          # JWT: authenticateToken, requireAdmin
+
+│   ├── routes/
+
+│   │   ├── auth.js          # Login, registro, usuários
+
+│   │   ├── documents.js     # CRUD de documentos + histórico
+
+│   │   ├── documentTypes.js # CRUD de tipos de documento
+
+│   │   └── reports.js       # Relatórios + exportação CSV
+
+│   └── tests/
+
+│       └── api.test.js      # 26 testes automatizados
+
+├── frontend/
+
+│   ├── index.html           # Estrutura completa (todas as telas)
+
+│   ├── styles.css           # Estilos responsivos com variáveis CSS
+
+│   └── app.js               # Lógica: autenticação, CRUD, relatórios
+
+├── database/
+
+│   └── schema.sql           # Schema MySQL + seed inicial
+
+└── docs/                    # Documentação do projeto
+
+## 🚀 Como executar
+
+### Pré-requisitos
+- Node.js 18+
+- MySQL 8+
+
+### 1. Banco de dados
+```bash
+mysql -u root -p < database/schema.sql
+```
+
+### 2. Backend
+```bash
+cd backend
+cp .env.example .env
+# Edite .env com suas credenciais do MySQL
+npm install
+npm run dev     # desenvolvimento
+npm start       # produção
+```
+
+### 3. Frontend
+Abra `frontend/index.html` no navegador, ou sirva com um servidor estático:
+```bash
+npx serve frontend
+```
+
+### 4. Testes
+```bash
+cd backend
+npm test               # roda os 26 testes
+npm run test:coverage  # com cobertura
+```
+
+## 🔑 Credenciais padrão
+
+| Campo  | Valor           |
+|--------|-----------------|
+| E-mail | admin@sced.com  |
+| Senha  | admin123        |
+| Perfil | Administrador   |
+
+> ⚠️ Altere a senha do admin após o primeiro acesso em produção.
+
+## 📡 Endpoints da API
+
+| Método | Rota | Acesso | Descrição |
+|--------|------|--------|-----------|
+| GET | `/api/health` | Público | Status da API |
+| POST | `/api/login` | Público | Autenticação JWT |
+| GET | `/api/me` | Autenticado | Dados do usuário logado |
+| POST | `/api/register` | Admin | Cadastrar usuário |
+| GET | `/api/users` | Admin | Listar usuários |
+| GET | `/api/documents` | Autenticado | Listar com filtros e paginação |
+| POST | `/api/documents` | Autenticado | Criar documento (gera protocolo) |
+| GET | `/api/documents/:id` | Autenticado | Detalhe do documento |
+| PUT | `/api/documents/:id/status` | Autenticado | Alterar status |
+| GET | `/api/documents/:id/history` | Autenticado | Histórico de movimentações |
+| GET | `/api/document-types` | Autenticado | Listar tipos |
+| POST | `/api/document-types` | Admin | Criar tipo |
+| PUT | `/api/document-types/:id` | Admin | Editar tipo |
+| DELETE | `/api/document-types/:id` | Admin | Desativar tipo |
+| GET | `/api/reports` | Autenticado | Relatório JSON ou CSV |
+
+### Protocolo automático
+Formato: `SCED-YYYYMMDD-XXXX` — ex: `SCED-20250616-0042`
+
+### Fluxo de status
+`recebido` → `em_analise` → `encaminhado` → `finalizado`
+
+## 🧪 Testes — 26 casos cobertos
+
+| Suite | Testes |
+|-------|--------|
+| Health Check | 1 |
+| POST /api/login | 4 |
+| POST /api/register | 5 |
+| POST /api/documents | 3 |
+| GET /api/documents | 2 |
+| PUT /api/documents/:id/status | 4 |
+| GET /api/document-types | 1 |
+| POST /api/document-types | 3 |
+| GET /api/reports | 3 |
+
+## 📋 Issues implementadas
+
+| Issue | Título | Status |
+|-------|--------|--------|
+| T16 (#19) | Configurar ambiente de desenvolvimento | ✅ Fechada |
+| T18 (#21) | Conectar o banco de dados | ✅ Fechada |
+| T19 (#22) | Criar model de usuários | ✅ Fechada |
+| T20 (#23) | Implementar login | ✅ Fechada |
+| T21 (#24) | Cadastro do usuário | ✅ Fechada |
+| T22 (#25) | Cadastro do documento | ✅ Fechada |
+| T23 (#26) | Regras de negócio | ✅ Fechada |
+| T24 (#27) | Tela de login | ✅ Fechada |
+| T25 (#28) | Tela de cadastro | ✅ Fechada |
+| T26 (#29) | Tela de registro de documentos | ✅ Fechada |
+| T27 (#30) | Tela de consulta | ✅ Fechada |
+| T28 (#31) | Testar funcionalidades principais | ✅ Fechada |
+| T29 (#32) | Corrigir bugs | ✅ Fechada |
+| T30 (#33) | Validar sistema completo | ✅ Fechada |
+| T31 (#34) | Criar relatório final | ✅ Fechada |
 
 ## 🛠️ Tecnologias
 
-* Node.js
-* Express
-* MySQL
-* HTML, CSS, JavaScript
-
-## ▶️ Como rodar o projeto
-
-### Backend
-
-```bash
-cd backend
-npm install
-# Configure o banco de dados MySQL e execute o schema.sql
-npm start
-```
-
-### Frontend
-
-```bash
-cd frontend
-# Abra o index.html no navegador ou use um servidor local
-```
-
-## 🧪 Testes
-
-```bash
-cd backend
-npm test
-```
-
-## 📚 Documentação
-
-* [Planejamento](docs/planejamento.md)
-* [API Documentation](docs/api.md) (em desenvolvimento)
-
-## 🔧 Tecnologias Utilizadas
-
-* **Backend**: Node.js, Express.js, MySQL, JWT, bcrypt
-* **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-* **Banco de Dados**: MySQL
-* **Testes**: Jest, Supertest
-* **Linting**: ESLint
-
-## 📋 Pré-requisitos
-
-* Node.js (v14+)
-* MySQL Server
-* Navegador web moderno
-
-## 🤝 Contribuição
-
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. Commit suas mudanças (`git commit -am 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-cd frontend
-npm install
-npm start
-```
-
-## 🗄️ Banco de Dados
-
-O script está em:
-
-```
-/database/script.sql
-```
-
-## 📌 Requisitos Não Funcionais
-
-* Responsivo
-* Controle de acesso
-* Logs
-* Versionamento no GitHub
-
-## 👥 Equipe
-
-Luiz Ricardo - Product Owner
-João Nilton - Scrum Master
-Adler koneski- Desenvolvedor
-Isaque  - Responsável por QA/Testes
-Matheus Boleta - Responsável por Documentação
-Kaio - Desenvolvedor
-Guilherme - Desenvolver 
+- **Backend:** Node.js, Express 4, mysql2, bcryptjs, jsonwebtoken, dotenv
+- **Frontend:** HTML5, CSS3, JavaScript ES6+ (sem frameworks)
+- **Banco:** MySQL 8
+- **Testes:** Jest 29, Supertest
