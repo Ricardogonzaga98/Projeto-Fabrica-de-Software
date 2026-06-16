@@ -61,3 +61,6 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# Logs da aplicação
+backend/logs/
