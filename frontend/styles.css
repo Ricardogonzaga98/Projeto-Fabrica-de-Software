@@ -89,12 +89,18 @@ body {
 /* MAIN */
 #main {
   margin-top: var(--header-h);
+  margin-left: 0;
   padding: 2rem;
   min-height: calc(100vh - var(--header-h));
+  transition: margin-left 0.2s;
+  box-sizing: border-box;
+  width: 100%;
 }
-#main.with-sidebar { margin-left: var(--sidebar-w); }
-.page { display: block; }
-.page.hidden { display: none; }
+
+#main.with-sidebar {
+  margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
+}
 
 /* AUTH */
 .auth-page {
