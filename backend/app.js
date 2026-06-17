@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const logger = require('./middleware/logger');
@@ -22,6 +23,12 @@ app.use('/api', reportRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'API funcionando', version: '1.0.0' });
+});
+
+// Serve o frontend
+app.use(express.static(path.join(__dirname, '../frontend')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 module.exports = app;

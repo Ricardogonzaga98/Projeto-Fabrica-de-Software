@@ -376,6 +376,7 @@ tr:last-child td { border-bottom: none; }
 }
 
 /* RESPONSIVE */
+/* RESPONSIVE */
 @media (max-width: 768px) {
   :root { --sidebar-w: 0px; }
   #sidebar { display: none !important; }
@@ -384,3 +385,5 @@ tr:last-child td { border-bottom: none; }
   .detail-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+.hidden { display: none !important; }
