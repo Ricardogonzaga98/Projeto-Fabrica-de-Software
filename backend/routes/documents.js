@@ -2,8 +2,40 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
-// Gera protocolo único: SCED-YYYYMMDD-XXXX
+// Configuração do multer para upload de arquivos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = `doc-${Date.now()}${ext}`;
+    cb(null, name);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tipo de arquivo não permitido. Use PDF, DOC, DOCX, PNG ou JPG.'));
+    }
+  }
+});
+
 async function gerarProtocolo() {
   const hoje = new Date();
   const ano  = hoje.getFullYear();
@@ -20,7 +52,6 @@ async function gerarProtocolo() {
   return `SCED-${prefixoData}-${sequencial}`;
 }
 
-// GET /api/documents
 router.get('/documents', authenticateToken, async (req, res) => {
   const { protocol, sender, type, status, start_date, end_date, page = 1, limit = 10 } = req.query;
   const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -66,7 +97,6 @@ router.get('/documents', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/documents/:id
 router.get('/documents/:id', authenticateToken, async (req, res) => {
   try {
     const [rows] = await db.promise().query(
@@ -88,8 +118,7 @@ router.get('/documents/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/documents
-router.post('/documents', authenticateToken, async (req, res) => {
+router.post('/documents', authenticateToken, upload.single('attachment'), async (req, res) => {
   const { type_id, received_date, sender, subject, destination_sector, responsible, observations } = req.body;
 
   if (!received_date || !sender || !subject) {
@@ -104,13 +133,14 @@ router.post('/documents', authenticateToken, async (req, res) => {
 
   try {
     const protocol = await gerarProtocolo();
+    const attachmentPath = req.file ? req.file.filename : null;
 
     const [result] = await db.promise().query(
       `INSERT INTO documents
-        (protocol, type_id, received_date, sender, subject, destination_sector, responsible, observations, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (protocol, type_id, received_date, sender, subject, destination_sector, responsible, observations, attachment_path, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [protocol, type_id || null, received_date, sender.trim(), subject.trim(),
-       destination_sector || null, responsible || null, observations || null, req.user.id]
+       destination_sector || null, responsible || null, observations || null, attachmentPath, req.user.id]
     );
 
     await db.promise().query(
@@ -126,7 +156,29 @@ router.post('/documents', authenticateToken, async (req, res) => {
   }
 });
 
-// PUT /api/documents/:id/status
+router.get('/documents/:id/download', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.promise().query(
+      'SELECT attachment_path FROM documents WHERE id = ?',
+      [req.params.id]
+    );
+
+    if (rows.length === 0 || !rows[0].attachment_path) {
+      return res.status(404).json({ error: 'Anexo não encontrado' });
+    }
+
+    const filePath = path.join(__dirname, '../../uploads', rows[0].attachment_path);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Arquivo não encontrado no servidor' });
+    }
+
+    res.download(filePath, rows[0].attachment_path);
+  } catch (error) {
+    console.error('Erro ao baixar arquivo:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 router.put('/documents/:id/status', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { status, notes } = req.body;
@@ -166,7 +218,6 @@ router.put('/documents/:id/status', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/documents/:id/history
 router.get('/documents/:id/history', authenticateToken, async (req, res) => {
   try {
     const [rows] = await db.promise().query(
