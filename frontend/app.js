@@ -1,4 +1,4 @@
-const API = 'http://localhost:3001/api';
+const API = '/api';
 
 // Estado global
 let token       = localStorage.getItem('sced_token');

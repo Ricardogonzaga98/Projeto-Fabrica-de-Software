@@ -2,7 +2,7 @@ require('dotenv').config();
 const app = require('./app');
 const db = require('./config/database');
 
-const PORT = process.env.PORT || 3006;
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   console.log(`Servidor SCED rodando na porta ${PORT}`);
