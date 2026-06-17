@@ -394,7 +394,7 @@ async function viewDocument(id) {
 
     const anexoHTML = doc.attachment_path
       ? `<div class="detail-field"><label>Anexo</label><p>
-           <a href="${API}/documents/${id}/download" target="_blank"
+           <a href="#" onclick="downloadAnexo(${id}); return false;"
               style="color:var(--primary);text-decoration:underline">
              📎 Baixar anexo
            </a>
@@ -682,7 +682,27 @@ async function apiFetch(path, method = 'GET', body = null, withAuth = true) {
   return res;
 }
 
+async function downloadAnexo(id) {
+  try {
+    const res = await fetch(`${API}/documents/${id}/download`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) { showToast('Erro ao baixar anexo', 'error'); return; }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `anexo-${id}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) { showToast('Erro ao baixar anexo', 'error'); }
+}
+
+
 // Expor funções para uso inline no HTML
+window.downloadAnexo = downloadAnexo;
 window.goToPage            = goToPage;
 window.applyFilters        = applyFilters;
 window.clearFilters        = clearFilters;
