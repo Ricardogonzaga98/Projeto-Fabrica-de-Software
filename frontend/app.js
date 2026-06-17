@@ -1,22 +1,25 @@
 const API = '/api';
+const API_TIMEOUT_MS = 10000;
 
 // Estado global
 let token       = localStorage.getItem('sced_token');
-let currentUser = JSON.parse(localStorage.getItem('sced_user') || 'null');
+let currentUser = null;
 let currentPage = 1;
 let currentFilters = {};
 let documentTypes  = [];
+
+try {
+  currentUser = JSON.parse(localStorage.getItem('sced_user') || 'null');
+} catch {
+  token = null;
+  localStorage.removeItem('sced_token');
+  localStorage.removeItem('sced_user');
+}
 
 // ============================================================
 // INICIALIZAÇÃO
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-  if (token && currentUser) {
-    initApp();
-  } else {
-    showPage('login');
-  }
-
   document.getElementById('login-form').addEventListener('submit', handleLogin);
   document.getElementById('new-document-form').addEventListener('submit', handleNewDocument);
   document.getElementById('register-form').addEventListener('submit', handleRegister);
@@ -26,9 +29,29 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('logout-btn').addEventListener('click', logout);
+
+  bootstrapApp();
 });
 
-function initApp() {
+async function bootstrapApp() {
+  if (!token || !currentUser) {
+    clearSession();
+    showLoginScreen();
+    return;
+  }
+
+  try {
+    await initApp();
+  } catch (error) {
+    showLoginScreen(error.message);
+  }
+}
+
+async function initApp() {
+  await loadDocumentTypes();
+
+  if (!token || !currentUser) return;
+
   document.getElementById('header').classList.remove('hidden');
   document.getElementById('sidebar').classList.remove('hidden');
   document.getElementById('main').classList.add('with-sidebar');
@@ -40,9 +63,7 @@ function initApp() {
     document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
   }
 
-  loadDocumentTypes().then(() => {
-    goToPage('dashboard');
-  });
+  goToPage('dashboard');
 }
 
 // ============================================================
@@ -97,7 +118,7 @@ async function handleLogin(e) {
     currentUser = data.user;
     localStorage.setItem('sced_token', token);
     localStorage.setItem('sced_user', JSON.stringify(currentUser));
-    initApp();
+    await initApp();
   } catch (err) {
     errEl.textContent = err.message;
     errEl.classList.remove('hidden');
@@ -107,16 +128,32 @@ async function handleLogin(e) {
   }
 }
 
-function logout() {
+function clearSession() {
   token       = null;
   currentUser = null;
   localStorage.removeItem('sced_token');
   localStorage.removeItem('sced_user');
+}
+
+function showLoginScreen(message = '') {
   document.getElementById('header').classList.add('hidden');
   document.getElementById('sidebar').classList.add('hidden');
   document.getElementById('main').classList.remove('with-sidebar');
   document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
   showPage('login');
+
+  const errEl = document.getElementById('login-error');
+  if (message) {
+    errEl.textContent = message;
+    errEl.classList.remove('hidden');
+  } else {
+    errEl.classList.add('hidden');
+  }
+}
+
+function logout() {
+  clearSession();
+  showLoginScreen();
 }
 
 // ============================================================
@@ -354,9 +391,7 @@ async function exportCSV() {
   params.append('format', 'csv');
 
   try {
-    const res = await fetch(`${API}/reports?${params}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const res = await apiFetch(`/reports?${params}`);
     if (!res.ok) { showToast('Erro ao exportar CSV', 'error'); return; }
 
     const blob    = await res.blob();
@@ -468,15 +503,18 @@ async function confirmStatusChange() {
 // ADMINISTRAÇÃO
 // ============================================================
 async function loadAdminPage() {
-  await loadDocumentTypes();
-  renderTypesList();
+  try {
+    await loadDocumentTypes();
+    renderTypesList();
+  } catch (e) {
+    console.error('Erro ao carregar administração:', e);
+  }
 }
 
 async function loadDocumentTypes() {
-  try {
-    const res = await apiFetch('/document-types');
-    if (res.ok) documentTypes = await res.json();
-  } catch (e) { console.error('Erro ao carregar tipos:', e); }
+  const res = await apiFetch('/document-types');
+  if (!res.ok) throw new Error('Não foi possível carregar os tipos de documento');
+  documentTypes = await res.json();
 }
 
 function renderTypesList() {
@@ -652,16 +690,30 @@ async function apiFetch(path, method = 'GET', body = null, withAuth = true) {
   const headers = { 'Content-Type': 'application/json' };
   if (withAuth && token) headers['Authorization'] = `Bearer ${token}`;
 
-  const opts = { method, headers };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const opts = { method, headers, signal: controller.signal };
   if (body) opts.body = JSON.stringify(body);
 
-  const res = await fetch(`${API}${path}`, opts);
+  try {
+    const res = await fetch(`${API}${path}`, opts);
 
-  if (res.status === 401 || res.status === 403) {
-    logout();
-    throw new Error('Sessão expirada');
+    if (withAuth && (res.status === 401 || res.status === 403)) {
+      logout();
+      throw new Error('Sessão expirada. Entre novamente.');
+    }
+    return res;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('O servidor demorou para responder. Tente novamente.');
+    }
+    if (error instanceof TypeError) {
+      throw new Error('Não foi possível conectar ao servidor.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-  return res;
 }
 
 // Expor funções para uso inline no HTML
