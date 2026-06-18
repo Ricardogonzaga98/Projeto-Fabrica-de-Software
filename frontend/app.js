@@ -1058,7 +1058,6 @@ window.confirmStatusChange = confirmStatusChange;
 window.createDocumentType  = createDocumentType;
 window.deleteDocumentType  = deleteDocumentType;
 window.resetNewDocumentForm = resetNewDocumentForm;
-<<<<<<< HEAD
 window.loadProcesses            = loadProcesses;
 window.applyProcessFilters      = applyProcessFilters;
 window.clearProcessFilters      = clearProcessFilters;
@@ -1068,5 +1067,3 @@ window.openProcessStatusModal   = openProcessStatusModal;
 window.closeProcessStatusModal  = closeProcessStatusModal;
 window.confirmProcessStatusChange = confirmProcessStatusChange;
 window.resetNewProcessForm      = resetNewProcessForm;
-=======
->>>>>>> 60fd1cdb5ca1d5a0c9366c7271397c334c86a9a0

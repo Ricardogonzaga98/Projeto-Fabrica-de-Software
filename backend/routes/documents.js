@@ -141,10 +141,8 @@ router.post('/documents', authenticateToken, upload.single('attachment'), async 
   }
 
   try {
-    let protocol;
-    let result;
+    const attachmentPath = req.file ? req.file.filename : null;
 
-<<<<<<< HEAD
     // Valida process_id se fornecido
     let validProcessId = null;
     if (process_id) {
@@ -154,25 +152,20 @@ router.post('/documents', authenticateToken, upload.single('attachment'), async 
       if (proc.length > 0) validProcessId = process_id;
     }
 
-    const [result] = await db.promise().query(
-      `INSERT INTO documents
-        (protocol, type_id, received_date, sender, subject, destination_sector, responsible, observations, attachment_path, process_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [protocol, type_id || null, received_date, sender.trim(), subject.trim(),
-       destination_sector || null, responsible || null, observations || null,
-       attachmentPath, validProcessId, req.user.id]
-    );
-=======
+    let protocol;
+    let result;
+
     for (let attempt = 1; attempt <= MAX_PROTOCOL_RETRIES; attempt++) {
       protocol = await gerarProtocolo();
 
       try {
         [result] = await db.promise().query(
           `INSERT INTO documents
-            (protocol, type_id, received_date, sender, subject, destination_sector, responsible, observations, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (protocol, type_id, received_date, sender, subject, destination_sector, responsible, observations, attachment_path, process_id, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [protocol, type_id || null, received_date, sender.trim(), subject.trim(),
-           destination_sector || null, responsible || null, observations || null, req.user.id]
+           destination_sector || null, responsible || null, observations || null,
+           attachmentPath, validProcessId, req.user.id]
         );
         break;
       } catch (error) {
@@ -181,7 +174,6 @@ router.post('/documents', authenticateToken, upload.single('attachment'), async 
         }
       }
     }
->>>>>>> 60fd1cdb5ca1d5a0c9366c7271397c334c86a9a0
 
     await db.promise().query(
       `INSERT INTO document_history (document_id, user_id, action, new_status, notes)
