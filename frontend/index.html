@@ -33,8 +33,8 @@
       <button class="nav-item" data-page="new-document">
         <span class="nav-icon"></span> Novo Documento
       </button>
-      <button class="nav-item" data-page="consult">
-        <span class="nav-icon"></span> Consulta
+      <button class="nav-item" data-page="processes">
+        <span class="nav-icon"></span> Processos
       </button>
       <button class="nav-item" data-page="reports">
         <span class="nav-icon"></span> Relatórios
@@ -188,6 +188,12 @@
             <textarea id="doc-observations" rows="3" placeholder="Observações adicionais (opcional)"></textarea>
           </div>
           <div class="form-group">
+            <label for="doc-process">Vincular a Processo <span style="color:var(--text-muted);font-size:.85rem">(opcional)</span></label>
+            <select id="doc-process">
+              <option value="">Nenhum</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label for="doc-attachment">Anexo <span style="color:var(--text-muted);font-size:.85rem">(PDF, DOC, DOCX, PNG, JPG — máx. 10MB)</span></label>
             <input type="file" id="doc-attachment" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
           </div>
@@ -199,7 +205,149 @@
         </form>
       </div>
     </section>
+<!-- PROCESSOS -->
+    <section id="page-processes" class="page hidden">
+      <div class="page-header">
+        <h2>Processos</h2>
+        <button class="btn btn-primary" onclick="goToPage('new-process')">+ Novo Processo</button>
+      </div>
 
+      <!-- Filtros -->
+      <div class="filter-bar">
+        <input type="text" id="proc-filter-protocol" placeholder="Protocolo">
+        <input type="text" id="proc-filter-sender" placeholder="Remetente">
+        <select id="proc-filter-type">
+          <option value="">Todos os tipos</option>
+        </select>
+        <select id="proc-filter-status">
+          <option value="">Todos os status</option>
+          <option value="recebido">Recebido</option>
+          <option value="em_analise">Em Análise</option>
+          <option value="encaminhado">Encaminhado</option>
+          <option value="finalizado">Finalizado</option>
+        </select>
+        <button class="btn btn-primary" onclick="applyProcessFilters()">Filtrar</button>
+        <button class="btn btn-secondary" onclick="clearProcessFilters()">Limpar</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Protocolo</th>
+              <th>Tipo</th>
+              <th>Remetente</th>
+              <th>Assunto</th>
+              <th>Status</th>
+              <th>Data</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="processes-tbody"></tbody>
+        </table>
+      </div>
+      <p id="processes-empty" class="empty-state hidden">Nenhum processo encontrado.</p>
+      <div id="processes-pagination"></div>
+    </section>
+
+    <!-- NOVO PROCESSO -->
+    <section id="page-new-process" class="page hidden">
+      <div class="page-header">
+        <h2>Registrar Novo Processo</h2>
+        <button class="btn btn-secondary" onclick="goToPage('processes')">← Voltar</button>
+      </div>
+      <div class="form-card">
+        <form id="new-process-form" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="proc-type">Tipo de Documento</label>
+              <select id="proc-type">
+                <option value="">Selecione o tipo</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="proc-date">Data de Recebimento *</label>
+              <input type="date" id="proc-date" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="proc-sender">Remetente *</label>
+              <input type="text" id="proc-sender" placeholder="Nome do remetente" required>
+            </div>
+            <div class="form-group">
+              <label for="proc-sector">Setor de Destino</label>
+              <input type="text" id="proc-sector" placeholder="Setor responsável">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="proc-subject">Assunto *</label>
+            <input type="text" id="proc-subject" placeholder="Descreva o assunto do processo" required>
+          </div>
+          <div class="form-group">
+            <label for="proc-responsible">Responsável</label>
+            <input type="text" id="proc-responsible" placeholder="Nome do responsável">
+          </div>
+          <div class="form-group">
+            <label for="proc-observations">Observações</label>
+            <textarea id="proc-observations" rows="3" placeholder="Observações adicionais (opcional)"></textarea>
+          </div>
+          <div id="new-proc-error" class="alert alert-danger hidden"></div>
+          <div id="new-proc-success" class="alert alert-success hidden"></div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">💾 Registrar Processo</button>
+            <button type="button" class="btn btn-secondary" onclick="resetNewProcessForm()">Limpar</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- MODAL PROCESSO -->
+    <div id="process-modal-overlay" class="modal-overlay hidden" onclick="closeProcessModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 id="process-modal-title">Detalhes do Processo</h3>
+          <button class="modal-close" onclick="closeProcessModal()">×</button>
+        </div>
+        <div id="process-modal-body" class="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- MODAL STATUS PROCESSO -->
+    <div id="process-status-modal-overlay" class="modal-overlay hidden" onclick="closeProcessStatusModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Alterar Status do Processo</h3>
+          <button class="modal-close" onclick="closeProcessStatusModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="process-status-doc-id">
+          <input type="hidden" id="process-status-doc-protocol">
+          <div class="form-group">
+            <label>Protocolo</label>
+            <p id="process-status-protocol-label" style="font-weight:600"></p>
+          </div>
+          <div class="form-group">
+            <label for="process-status-new">Novo Status</label>
+            <select id="process-status-new">
+              <option value="recebido">Recebido</option>
+              <option value="em_analise">Em Análise</option>
+              <option value="encaminhado">Encaminhado</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="process-status-notes">Observações</label>
+            <textarea id="process-status-notes" rows="2" placeholder="Motivo da alteração (opcional)"></textarea>
+          </div>
+          <div id="process-status-error" class="alert alert-danger hidden"></div>
+          <div class="form-actions">
+            <button class="btn btn-primary" onclick="confirmProcessStatusChange()">Confirmar</button>
+            <button class="btn btn-secondary" onclick="closeProcessStatusModal()">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- CONSULTA -->
     <section id="page-consult" class="page hidden">
       <div class="page-header">

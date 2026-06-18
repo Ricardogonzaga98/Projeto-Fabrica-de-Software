@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('login-form').addEventListener('submit', handleLogin);
   document.getElementById('new-document-form').addEventListener('submit', handleNewDocument);
+  document.getElementById('new-process-form').addEventListener('submit', handleNewProcess);
   document.getElementById('register-form').addEventListener('submit', handleRegister);
 
   document.querySelectorAll('.nav-item').forEach(btn => {
@@ -62,6 +63,8 @@ function goToPage(name) {
   if (name === 'dashboard')    loadDashboard();
   if (name === 'documents')    loadDocuments();
   if (name === 'new-document') prepareNewDocumentForm();
+  if (name === 'processes')    loadProcesses();
+  if (name === 'new-process')  prepareNewProcessForm();
   if (name === 'consult')      populateConsultSelects();
   if (name === 'reports')      populateReportSelects();
   if (name === 'admin')        loadAdminPage();
@@ -200,6 +203,20 @@ async function prepareNewDocumentForm() {
     sel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.name}</option>`);
   });
   document.getElementById('doc-date').value = new Date().toISOString().split('T')[0];
+
+  // Carrega processos disponíveis para vinculação
+  try {
+    const res = await apiFetch('/processes?limit=100');
+    const data = await res.json();
+    const procSel = document.getElementById('doc-process');
+    procSel.innerHTML = '<option value="">Nenhum</option>';
+    if (data.processes) {
+      data.processes.forEach(p => {
+        procSel.insertAdjacentHTML('beforeend',
+          `<option value="${p.id}">[${p.protocol}] ${p.subject}</option>`);
+      });
+    }
+  } catch (e) { console.error('Erro ao carregar processos:', e); }
 }
 
 async function handleNewDocument(e) {
@@ -217,6 +234,11 @@ async function handleNewDocument(e) {
   formData.append('destination_sector', document.getElementById('doc-sector').value.trim());
   formData.append('responsible',        document.getElementById('doc-responsible').value.trim());
   formData.append('observations',       document.getElementById('doc-observations').value.trim());
+
+  const procSelect = document.getElementById('doc-process');
+  if (procSelect && procSelect.value) {
+    formData.append('process_id', procSelect.value);
+  }
 
   const fileInput = document.getElementById('doc-attachment');
   if (fileInput && fileInput.files[0]) {
@@ -700,6 +722,232 @@ async function downloadAnexo(id) {
   } catch (e) { showToast('Erro ao baixar anexo', 'error'); }
 }
 
+// ============================================================
+// PROCESSOS
+// ============================================================
+let currentProcessPage = 1;
+let currentProcessFilters = {};
+
+async function loadProcesses(page = 1) {
+  currentProcessPage = page;
+  const params = new URLSearchParams({ page, limit: 10, ...currentProcessFilters });
+
+  try {
+    const res  = await apiFetch(`/processes?${params}`);
+    const data = await res.json();
+    const tbody = document.getElementById('processes-tbody');
+    const empty = document.getElementById('processes-empty');
+    tbody.innerHTML = '';
+
+    if (!data.processes || data.processes.length === 0) {
+      empty.classList.remove('hidden');
+      document.getElementById('processes-pagination').innerHTML = '';
+      return;
+    }
+    empty.classList.add('hidden');
+    tbody.innerHTML = data.processes.map(p => `
+      <tr>
+        <td><code>${p.protocol}</code></td>
+        <td>${p.type_name || '–'}</td>
+        <td>${p.sender}</td>
+        <td title="${p.subject}">${truncate(p.subject, 40)}</td>
+        <td>${buildBadge(p.status)}</td>
+        <td>${formatDate(p.received_date)}</td>
+        <td>
+          <button class="btn btn-sm btn-secondary" onclick="viewProcess(${p.id})">👁 Ver</button>
+          <button class="btn btn-sm btn-primary" onclick="openProcessStatusModal(${p.id},'${p.protocol}','${p.status}')">✎ Status</button>
+        </td>
+      </tr>`).join('');
+    buildProcessPagination(data.pagination);
+  } catch (e) { console.error('Erro ao carregar processos:', e); }
+}
+
+function buildProcessPagination(pag) {
+  const container = document.getElementById('processes-pagination');
+  if (!container || pag.pages <= 1) { if (container) container.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" onclick="loadProcesses(${pag.page - 1})" ${pag.page <= 1 ? 'disabled' : ''}>‹ Ant</button>`;
+  for (let i = 1; i <= pag.pages; i++) {
+    if (i === 1 || i === pag.pages || Math.abs(i - pag.page) <= 2) {
+      html += `<button class="page-btn ${i === pag.page ? 'active' : ''}" onclick="loadProcesses(${i})">${i}</button>`;
+    } else if (Math.abs(i - pag.page) === 3) {
+      html += `<span style="padding:.35rem .4rem;color:var(--text-muted)">…</span>`;
+    }
+  }
+  html += `<button class="page-btn" onclick="loadProcesses(${pag.page + 1})" ${pag.page >= pag.pages ? 'disabled' : ''}>Prox ›</button>`;
+  container.innerHTML = html;
+}
+
+function applyProcessFilters() {
+  currentProcessFilters = {};
+  const protocol = document.getElementById('proc-filter-protocol').value.trim();
+  const sender   = document.getElementById('proc-filter-sender').value.trim();
+  const type     = document.getElementById('proc-filter-type').value;
+  const status   = document.getElementById('proc-filter-status').value;
+  if (protocol) currentProcessFilters.protocol = protocol;
+  if (sender)   currentProcessFilters.sender   = sender;
+  if (type)     currentProcessFilters.type     = type;
+  if (status)   currentProcessFilters.status   = status;
+  loadProcesses(1);
+}
+
+function clearProcessFilters() {
+  document.getElementById('proc-filter-protocol').value = '';
+  document.getElementById('proc-filter-sender').value   = '';
+  document.getElementById('proc-filter-type').value     = '';
+  document.getElementById('proc-filter-status').value   = '';
+  currentProcessFilters = {};
+  loadProcesses(1);
+}
+
+async function prepareNewProcessForm() {
+  const sel = document.getElementById('proc-type');
+  sel.innerHTML = '<option value="">Selecione o tipo</option>';
+  documentTypes.forEach(t => {
+    sel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.name}</option>`);
+  });
+  document.getElementById('proc-date').value = new Date().toISOString().split('T')[0];
+}
+
+async function handleNewProcess(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('new-proc-error');
+  const sucEl = document.getElementById('new-proc-success');
+  if (errEl) errEl.classList.add('hidden');
+  if (sucEl) sucEl.classList.add('hidden');
+
+  const payload = {
+    type_id:            document.getElementById('proc-type').value || null,
+    received_date:      document.getElementById('proc-date').value,
+    sender:             document.getElementById('proc-sender').value.trim(),
+    subject:            document.getElementById('proc-subject').value.trim(),
+    destination_sector: document.getElementById('proc-sector').value.trim(),
+    responsible:        document.getElementById('proc-responsible').value.trim(),
+    observations:       document.getElementById('proc-observations').value.trim()
+  };
+
+  try {
+    const res  = await apiFetch('/processes', 'POST', payload);
+    const data = await res.json();
+    if (!res.ok) {
+      if (errEl) { errEl.textContent = data.error || 'Erro ao registrar processo'; errEl.classList.remove('hidden'); }
+      return;
+    }
+    if (sucEl) { sucEl.textContent = `✅ Processo registrado! Protocolo: ${data.protocol}`; sucEl.classList.remove('hidden'); }
+    resetNewProcessForm();
+    showToast(`Protocolo gerado: ${data.protocol}`, 'success');
+  } catch (err) {
+    if (errEl) { errEl.textContent = 'Erro de comunicação com o servidor'; errEl.classList.remove('hidden'); }
+  }
+}
+
+function resetNewProcessForm() {
+  document.getElementById('new-process-form').reset();
+  document.getElementById('proc-date').value = new Date().toISOString().split('T')[0];
+}
+
+async function viewProcess(id) {
+  try {
+    const [resProc, resHist, resDocs] = await Promise.all([
+      apiFetch(`/processes/${id}`),
+      apiFetch(`/processes/${id}/history`),
+      apiFetch(`/processes/${id}/documents`)
+    ]);
+    const proc = await resProc.json();
+    const hist = await resHist.json();
+    const docs = await resDocs.json();
+
+    document.getElementById('process-modal-title').textContent = `Processo – ${proc.protocol}`;
+    document.getElementById('process-modal-body').innerHTML = `
+      <div class="detail-grid">
+        <div class="detail-field"><label>Protocolo</label><p><strong>${proc.protocol}</strong></p></div>
+        <div class="detail-field"><label>Status</label><p>${buildBadge(proc.status)}</p></div>
+        <div class="detail-field"><label>Tipo</label><p>${proc.type_name || '–'}</p></div>
+        <div class="detail-field"><label>Data de Recebimento</label><p>${formatDate(proc.received_date)}</p></div>
+        <div class="detail-field"><label>Remetente</label><p>${proc.sender}</p></div>
+        <div class="detail-field"><label>Setor de Destino</label><p>${proc.destination_sector || '–'}</p></div>
+        <div class="detail-field"><label>Responsável</label><p>${proc.responsible || '–'}</p></div>
+        <div class="detail-field"><label>Registrado por</label><p>${proc.creator_name || '–'}</p></div>
+      </div>
+      <div style="margin-top:1rem">
+        <label><strong>Assunto</strong></label>
+        <p style="margin-top:.3rem">${proc.subject}</p>
+      </div>
+      ${proc.observations ? `<div style="margin-top:.75rem"><label><strong>Observações</strong></label><p style="margin-top:.3rem;color:var(--text-muted)">${proc.observations}</p></div>` : ''}
+      <hr style="margin:1.25rem 0;border-color:var(--border)">
+      <h4 style="margin-bottom:.75rem">📄 Documentos Vinculados (${docs.length})</h4>
+      ${docs.length === 0
+        ? '<p style="color:var(--text-muted)">Nenhum documento vinculado.</p>'
+        : `<div class="table-wrap"><table>
+            <thead><tr><th>Protocolo</th><th>Remetente</th><th>Assunto</th><th>Status</th><th>Data</th></tr></thead>
+            <tbody>${docs.map(d => `
+              <tr>
+                <td><code>${d.protocol}</code></td>
+                <td>${d.sender}</td>
+                <td>${truncate(d.subject, 30)}</td>
+                <td>${buildBadge(d.status)}</td>
+                <td>${formatDate(d.received_date)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table></div>`
+      }
+      <hr style="margin:1.25rem 0;border-color:var(--border)">
+      <h4 style="margin-bottom:.75rem">Histórico de Movimentações</h4>
+      ${hist.length === 0
+        ? '<p style="color:var(--text-muted)">Sem histórico.</p>'
+        : hist.map(h => `
+          <div class="history-item">
+            <div class="hi-action">${h.action}${h.old_status
+              ? ` – <span style="color:var(--text-muted)">${labelStatus(h.old_status)}</span> → ${buildBadge(h.new_status)}`
+              : ''}</div>
+            <div class="hi-meta">Por <strong>${h.user_name || 'Sistema'}</strong> em ${formatDateTime(h.created_at)}${h.notes ? ` · ${h.notes}` : ''}</div>
+          </div>`).join('')
+      }`;
+    document.getElementById('process-modal-overlay').classList.remove('hidden');
+  } catch (e) { console.error('Erro ao buscar detalhes do processo:', e); }
+}
+
+function closeProcessModal() {
+  document.getElementById('process-modal-overlay').classList.add('hidden');
+}
+
+function openProcessStatusModal(id, protocol, currentStatus) {
+  document.getElementById('process-status-doc-id').value       = id;
+  document.getElementById('process-status-doc-protocol').value = protocol;
+  document.getElementById('process-status-protocol-label').textContent = protocol;
+  document.getElementById('process-status-new').value          = currentStatus;
+  document.getElementById('process-status-notes').value        = '';
+  document.getElementById('process-status-error').classList.add('hidden');
+  document.getElementById('process-status-modal-overlay').classList.remove('hidden');
+}
+
+function closeProcessStatusModal() {
+  document.getElementById('process-status-modal-overlay').classList.add('hidden');
+}
+
+async function confirmProcessStatusChange() {
+  const id     = document.getElementById('process-status-doc-id').value;
+  const status = document.getElementById('process-status-new').value;
+  const notes  = document.getElementById('process-status-notes').value.trim();
+  const errEl  = document.getElementById('process-status-error');
+  errEl.classList.add('hidden');
+
+  try {
+    const res  = await apiFetch(`/processes/${id}/status`, 'PUT', { status, notes });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Erro ao atualizar status';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    closeProcessStatusModal();
+    showToast('Status atualizado com sucesso!', 'success');
+    loadProcesses(currentProcessPage);
+  } catch (e) {
+    errEl.textContent = 'Erro de comunicação com o servidor';
+    errEl.classList.remove('hidden');
+  }
+}
 
 // Expor funções para uso inline no HTML
 window.downloadAnexo = downloadAnexo;
@@ -718,3 +966,12 @@ window.confirmStatusChange = confirmStatusChange;
 window.createDocumentType  = createDocumentType;
 window.deleteDocumentType  = deleteDocumentType;
 window.resetNewDocumentForm = resetNewDocumentForm;
+window.loadProcesses            = loadProcesses;
+window.applyProcessFilters      = applyProcessFilters;
+window.clearProcessFilters      = clearProcessFilters;
+window.viewProcess              = viewProcess;
+window.closeProcessModal        = closeProcessModal;
+window.openProcessStatusModal   = openProcessStatusModal;
+window.closeProcessStatusModal  = closeProcessStatusModal;
+window.confirmProcessStatusChange = confirmProcessStatusChange;
+window.resetNewProcessForm      = resetNewProcessForm;
