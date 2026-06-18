@@ -253,22 +253,30 @@ async function handleNewDocument(e) {
   e.preventDefault();
   const errEl = document.getElementById('new-doc-error');
   const sucEl = document.getElementById('new-doc-success');
-  errEl.classList.add('hidden');
-  sucEl.classList.add('hidden');
+  if (errEl) errEl.classList.add('hidden');
+  if (sucEl) sucEl.classList.add('hidden');
 
-  const payload = {
-    type_id:            document.getElementById('doc-type').value || null,
-    received_date:      document.getElementById('doc-date').value,
-    sender:             document.getElementById('doc-sender').value.trim(),
-    subject:            document.getElementById('doc-subject').value.trim(),
-    destination_sector: document.getElementById('doc-sector').value.trim(),
-    responsible:        document.getElementById('doc-responsible').value.trim(),
-    observations:       document.getElementById('doc-observations').value.trim()
-  };
+  const formData = new FormData();
+  formData.append('type_id',            document.getElementById('doc-type').value || '');
+  formData.append('received_date',      document.getElementById('doc-date').value);
+  formData.append('sender',             document.getElementById('doc-sender').value.trim());
+  formData.append('subject',            document.getElementById('doc-subject').value.trim());
+  formData.append('destination_sector', document.getElementById('doc-sector').value.trim());
+  formData.append('responsible',        document.getElementById('doc-responsible').value.trim());
+  formData.append('observations',       document.getElementById('doc-observations').value.trim());
+
+  const fileInput = document.getElementById('doc-attachment');
+  if (fileInput && fileInput.files[0]) {
+    formData.append('attachment', fileInput.files[0]);
+  }
 
   try {
-    const res  = await apiFetch('/documents', 'POST', payload);
-    const data = await readJsonResponse(res);
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res  = await fetch(`${API}/documents`, { method: 'POST', headers, body: formData });
+    const data = await res.json();
+
     if (!res.ok) {
       errEl.textContent = data.error || 'Erro ao registrar documento';
       errEl.classList.remove('hidden');
@@ -429,7 +437,16 @@ async function viewDocument(id) {
     const doc  = await readJsonResponse(resDoc);
     const hist = await readJsonResponse(resHist);
 
-    document.getElementById('modal-title').textContent = `Documento — ${doc.protocol}`;
+    const anexoHTML = doc.attachment_path
+      ? `<div class="detail-field"><label>Anexo</label><p>
+           <a href="#" onclick="downloadAnexo(${id}); return false;"
+              style="color:var(--primary);text-decoration:underline">
+             📎 Baixar anexo
+           </a>
+         </p></div>`
+      : `<div class="detail-field"><label>Anexo</label><p style="color:var(--text-muted)">Nenhum anexo</p></div>`;
+
+    document.getElementById('modal-title').textContent = `Documento – ${doc.protocol}`;
     document.getElementById('modal-body').innerHTML = `
       <div class="detail-grid">
         <div class="detail-field"><label>Protocolo</label><p><strong>${doc.protocol}</strong></p></div>
@@ -440,6 +457,7 @@ async function viewDocument(id) {
         <div class="detail-field"><label>Setor de Destino</label><p>${doc.destination_sector || '–'}</p></div>
         <div class="detail-field"><label>Responsável</label><p>${doc.responsible || '–'}</p></div>
         <div class="detail-field"><label>Registrado por</label><p>${doc.creator_name || '–'}</p></div>
+        ${anexoHTML}
       </div>
       <div style="margin-top:1rem">
         <label><strong>Assunto</strong></label>
@@ -453,7 +471,7 @@ async function viewDocument(id) {
         : hist.map(h => `
           <div class="history-item">
             <div class="hi-action">${h.action}${h.old_status
-              ? ` — <span style="color:var(--text-muted)">${labelStatus(h.old_status)}</span> → ${buildBadge(h.new_status)}`
+              ? ` – <span style="color:var(--text-muted)">${labelStatus(h.old_status)}</span> → ${buildBadge(h.new_status)}`
               : ''}</div>
             <div class="hi-meta">Por <strong>${h.user_name || 'Sistema'}</strong> em ${formatDateTime(h.created_at)}${h.notes ? ` · ${h.notes}` : ''}</div>
           </div>`).join('')
@@ -756,7 +774,27 @@ async function apiFetch(path, method = 'GET', body = null, withAuth = true) {
   }
 }
 
+async function downloadAnexo(id) {
+  try {
+    const res = await fetch(`${API}/documents/${id}/download`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) { showToast('Erro ao baixar anexo', 'error'); return; }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `anexo-${id}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) { showToast('Erro ao baixar anexo', 'error'); }
+}
+
+
 // Expor funções para uso inline no HTML
+window.downloadAnexo = downloadAnexo;
 window.goToPage            = goToPage;
 window.applyFilters        = applyFilters;
 window.clearFilters        = clearFilters;

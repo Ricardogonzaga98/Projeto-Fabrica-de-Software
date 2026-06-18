@@ -25,22 +25,22 @@
   <div id="sidebar" class="hidden">
     <nav class="sidebar-nav">
       <button class="nav-item active" data-page="dashboard">
-        <span class="nav-icon">🏠</span> Dashboard
+        <span class="nav-icon"></span> Dashboard
       </button>
       <button class="nav-item" data-page="documents">
-        <span class="nav-icon">📋</span> Documentos
+        <span class="nav-icon"></span> Documentos
       </button>
       <button class="nav-item" data-page="new-document">
-        <span class="nav-icon">➕</span> Novo Documento
+        <span class="nav-icon"></span> Novo Documento
       </button>
       <button class="nav-item" data-page="consult">
-        <span class="nav-icon">🔍</span> Consulta
+        <span class="nav-icon"></span> Consulta
       </button>
       <button class="nav-item" data-page="reports">
-        <span class="nav-icon">📊</span> Relatórios
+        <span class="nav-icon"></span> Relatórios
       </button>
       <button class="nav-item admin-only hidden" data-page="admin">
-        <span class="nav-icon">⚙️</span> Administração
+        <span class="nav-icon"></span> Administração
       </button>
     </nav>
   </div>
@@ -52,7 +52,7 @@
     <section id="page-login" class="page auth-page">
       <div class="auth-card">
         <div class="auth-header">
-          <div class="auth-logo">📄</div>
+          <div class="auth-logo"></div>
           <h1>SCED</h1>
           <p>Sistema de Controle de Entrada de Documentos</p>
         </div>
@@ -184,7 +184,10 @@
             <label for="doc-observations">Observações</label>
             <textarea id="doc-observations" rows="3" placeholder="Observações adicionais (opcional)"></textarea>
           </div>
-          <div id="new-doc-error" class="alert alert-danger hidden"></div>
+          <div class="form-group">
+            <label for="doc-attachment">Anexo <span style="color:var(--text-muted);font-size:.85rem">(PDF, DOC, DOCX, PNG, JPG — máx. 10MB)</span></label>
+            <input type="file" id="doc-attachment" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
+          </div>
           <div id="new-doc-success" class="alert alert-success hidden"></div>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">💾 Registrar Documento</button>
