@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => goToPage(btn.dataset.page));
   });
 
+  document.querySelectorAll('.admin-menu-item').forEach(btn => {
+    btn.addEventListener('click', () => showAdminSection(btn.dataset.adminSection));
+  });
+
   document.getElementById('logout-btn').addEventListener('click', logout);
 
   bootstrapApp();
@@ -512,9 +516,22 @@ async function loadAdminPage() {
   try {
     await loadDocumentTypes();
     renderTypesList();
+    showAdminSection('types');
   } catch (e) {
     console.error('Erro ao carregar administração:', e);
   }
+}
+
+function showAdminSection(section) {
+  document.querySelectorAll('.admin-menu-item').forEach(btn => {
+    const isActive = btn.dataset.adminSection === section;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', String(isActive));
+  });
+
+  document.querySelectorAll('[data-admin-panel]').forEach(panel => {
+    panel.classList.toggle('hidden', panel.dataset.adminPanel !== section);
+  });
 }
 
 async function loadDocumentTypes() {
