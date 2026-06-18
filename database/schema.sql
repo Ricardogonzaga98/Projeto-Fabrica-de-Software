@@ -88,3 +88,48 @@ INSERT INTO document_types (name, description) VALUES
   ('Requerimento',  'Solicitação formal de cidadão ou servidor'),
   ('Contrato',      'Instrumento contratual')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- -------------------------------------------------------------
+-- Tabela de processos
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS processes (
+  id                  INT AUTO_INCREMENT PRIMARY KEY,
+  protocol            VARCHAR(20)                                                   UNIQUE NOT NULL,
+  type_id             INT,
+  received_date       DATE                                                          NOT NULL,
+  sender              VARCHAR(100)                                                  NOT NULL,
+  subject             VARCHAR(255)                                                  NOT NULL,
+  destination_sector  VARCHAR(100),
+  responsible         VARCHAR(100),
+  observations        TEXT,
+  status              ENUM('recebido','em_analise','encaminhado','finalizado')      DEFAULT 'recebido',
+  created_by          INT,
+  created_at          TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
+  updated_at          TIMESTAMP  DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (type_id)    REFERENCES document_types(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id)          ON DELETE SET NULL
+);
+
+-- -------------------------------------------------------------
+-- Tabela de histórico de processos
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS process_history (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  process_id   INT           NOT NULL,
+  user_id      INT,
+  action       VARCHAR(100)  NOT NULL,
+  old_status   VARCHAR(50),
+  new_status   VARCHAR(50),
+  notes        TEXT,
+  created_at   TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (process_id) REFERENCES processes(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id)    REFERENCES users(id)     ON DELETE SET NULL
+);
+
+-- -------------------------------------------------------------
+-- Vínculo entre documentos e processos
+-- -------------------------------------------------------------
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS process_id INT DEFAULT NULL;
+ALTER TABLE documents ADD COLUMN process_id INT DEFAULT NULL;
+ALTER TABLE documents ADD CONSTRAINT fk_document_process
+  FOREIGN KEY (process_id) REFERENCES processes(id) ON DELETE SET NULL;
