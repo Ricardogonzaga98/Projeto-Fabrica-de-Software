@@ -128,7 +128,7 @@ router.get('/documents/:id', authenticateToken, async (req, res) => {
 });
 
 router.post('/documents', authenticateToken, upload.single('attachment'), async (req, res) => {
-  const { type_id, received_date, sender, subject, destination_sector, responsible, observations, process_id } = req.body;
+  const { type_id, received_date, sender, subject, destination_sector, responsible, observations } = req.body;
 
   if (!received_date || !sender || !subject) {
     return res.status(400).json({ error: 'Campos obrigatórios: data de recebimento, remetente e assunto' });
@@ -144,25 +144,6 @@ router.post('/documents', authenticateToken, upload.single('attachment'), async 
     let protocol;
     let result;
 
-<<<<<<< HEAD
-    // Valida process_id se fornecido
-    let validProcessId = null;
-    if (process_id) {
-      const [proc] = await db.promise().query(
-        'SELECT id FROM processes WHERE id = ?', [process_id]
-      );
-      if (proc.length > 0) validProcessId = process_id;
-    }
-
-    const [result] = await db.promise().query(
-      `INSERT INTO documents
-        (protocol, type_id, received_date, sender, subject, destination_sector, responsible, observations, attachment_path, process_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [protocol, type_id || null, received_date, sender.trim(), subject.trim(),
-       destination_sector || null, responsible || null, observations || null,
-       attachmentPath, validProcessId, req.user.id]
-    );
-=======
     for (let attempt = 1; attempt <= MAX_PROTOCOL_RETRIES; attempt++) {
       protocol = await gerarProtocolo();
 
@@ -181,7 +162,6 @@ router.post('/documents', authenticateToken, upload.single('attachment'), async 
         }
       }
     }
->>>>>>> 60fd1cdb5ca1d5a0c9366c7271397c334c86a9a0
 
     await db.promise().query(
       `INSERT INTO document_history (document_id, user_id, action, new_status, notes)

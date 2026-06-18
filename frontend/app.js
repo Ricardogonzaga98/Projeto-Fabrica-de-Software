@@ -1,22 +1,31 @@
-const API = 'http://localhost:3006/api';
+const isLocalFrontendServer =
+  ['localhost', '127.0.0.1'].includes(window.location.hostname) &&
+  window.location.port &&
+  window.location.port !== '3001';
+const API = window.location.protocol === 'file:' || isLocalFrontendServer
+  ? 'http://localhost:3001/api'
+  : '/api';
+const API_TIMEOUT_MS = 10000;
 
 // Estado global
 let token       = localStorage.getItem('sced_token');
-let currentUser = JSON.parse(localStorage.getItem('sced_user') || 'null');
+let currentUser = null;
 let currentPage = 1;
 let currentFilters = {};
 let documentTypes  = [];
+
+try {
+  currentUser = JSON.parse(localStorage.getItem('sced_user') || 'null');
+} catch {
+  token = null;
+  localStorage.removeItem('sced_token');
+  localStorage.removeItem('sced_user');
+}
 
 // ============================================================
 // INICIALIZAÇÃO
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-  if (token && currentUser) {
-    initApp();
-  } else {
-    showPage('login');
-  }
-
   document.getElementById('login-form').addEventListener('submit', handleLogin);
   document.getElementById('new-document-form').addEventListener('submit', handleNewDocument);
   document.getElementById('new-process-form').addEventListener('submit', handleNewProcess);
@@ -26,10 +35,34 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => goToPage(btn.dataset.page));
   });
 
+  document.querySelectorAll('.admin-menu-item').forEach(btn => {
+    btn.addEventListener('click', () => showAdminSection(btn.dataset.adminSection));
+  });
+
   document.getElementById('logout-btn').addEventListener('click', logout);
+
+  bootstrapApp();
 });
 
-function initApp() {
+async function bootstrapApp() {
+  if (!token || !currentUser) {
+    clearSession();
+    showLoginScreen();
+    return;
+  }
+
+  try {
+    await initApp();
+  } catch (error) {
+    showLoginScreen(error.message);
+  }
+}
+
+async function initApp() {
+  await loadDocumentTypes();
+
+  if (!token || !currentUser) return;
+
   document.getElementById('header').classList.remove('hidden');
   document.getElementById('sidebar').classList.remove('hidden');
   document.getElementById('main').classList.add('with-sidebar');
@@ -41,9 +74,7 @@ function initApp() {
     document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
   }
 
-  loadDocumentTypes().then(() => {
-    goToPage('dashboard');
-  });
+  goToPage('dashboard');
 }
 
 // ============================================================
@@ -93,14 +124,14 @@ async function handleLogin(e) {
 
   try {
     const res  = await apiFetch('/login', 'POST', { email, password }, false);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.error || 'Erro no login');
 
     token       = data.token;
     currentUser = data.user;
     localStorage.setItem('sced_token', token);
     localStorage.setItem('sced_user', JSON.stringify(currentUser));
-    initApp();
+    await initApp();
   } catch (err) {
     errEl.textContent = err.message;
     errEl.classList.remove('hidden');
@@ -110,16 +141,32 @@ async function handleLogin(e) {
   }
 }
 
-function logout() {
+function clearSession() {
   token       = null;
   currentUser = null;
   localStorage.removeItem('sced_token');
   localStorage.removeItem('sced_user');
+}
+
+function showLoginScreen(message = '') {
   document.getElementById('header').classList.add('hidden');
   document.getElementById('sidebar').classList.add('hidden');
   document.getElementById('main').classList.remove('with-sidebar');
   document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
   showPage('login');
+
+  const errEl = document.getElementById('login-error');
+  if (message) {
+    errEl.textContent = message;
+    errEl.classList.remove('hidden');
+  } else {
+    errEl.classList.add('hidden');
+  }
+}
+
+function logout() {
+  clearSession();
+  showLoginScreen();
 }
 
 // ============================================================
@@ -128,7 +175,7 @@ function logout() {
 async function loadDashboard() {
   try {
     const res  = await apiFetch('/reports');
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) return;
 
     document.getElementById('stat-total').textContent      = data.totais.total;
@@ -153,7 +200,7 @@ async function loadDocuments(page = 1) {
 
   try {
     const res  = await apiFetch(`/documents?${params}`);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) return;
 
     const tbody = document.getElementById('documents-tbody');
@@ -302,7 +349,7 @@ async function runConsult() {
 
   try {
     const res  = await apiFetch(`/documents?${params}`);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     const tbody = document.getElementById('consult-tbody');
     const empty = document.getElementById('consult-empty');
     tbody.innerHTML = '';
@@ -355,7 +402,7 @@ function buildReportParams() {
 async function generateReport() {
   try {
     const res  = await apiFetch(`/reports?${buildReportParams()}`);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) return;
 
     document.getElementById('rep-total').textContent      = data.totais.total;
@@ -384,9 +431,7 @@ async function exportCSV() {
   params.append('format', 'csv');
 
   try {
-    const res = await fetch(`${API}/reports?${params}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const res = await apiFetch(`/reports?${params}`);
     if (!res.ok) { showToast('Erro ao exportar CSV', 'error'); return; }
 
     const blob    = await res.blob();
@@ -411,8 +456,8 @@ async function viewDocument(id) {
       apiFetch(`/documents/${id}`),
       apiFetch(`/documents/${id}/history`)
     ]);
-    const doc  = await resDoc.json();
-    const hist = await resHist.json();
+    const doc  = await readJsonResponse(resDoc);
+    const hist = await readJsonResponse(resHist);
 
     const anexoHTML = doc.attachment_path
       ? `<div class="detail-field"><label>Anexo</label><p>
@@ -486,7 +531,7 @@ async function confirmStatusChange() {
 
   try {
     const res  = await apiFetch(`/documents/${id}/status`, 'PUT', { status, notes });
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) {
       errEl.textContent = data.error || 'Erro ao atualizar status';
       errEl.classList.remove('hidden');
@@ -508,15 +553,31 @@ async function confirmStatusChange() {
 // ADMINISTRAÇÃO
 // ============================================================
 async function loadAdminPage() {
-  await loadDocumentTypes();
-  renderTypesList();
+  try {
+    await loadDocumentTypes();
+    renderTypesList();
+    showAdminSection('types');
+  } catch (e) {
+    console.error('Erro ao carregar administração:', e);
+  }
+}
+
+function showAdminSection(section) {
+  document.querySelectorAll('.admin-menu-item').forEach(btn => {
+    const isActive = btn.dataset.adminSection === section;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', String(isActive));
+  });
+
+  document.querySelectorAll('[data-admin-panel]').forEach(panel => {
+    panel.classList.toggle('hidden', panel.dataset.adminPanel !== section);
+  });
 }
 
 async function loadDocumentTypes() {
-  try {
-    const res = await apiFetch('/document-types');
-    if (res.ok) documentTypes = await res.json();
-  } catch (e) { console.error('Erro ao carregar tipos:', e); }
+  const res = await apiFetch('/document-types');
+  if (!res.ok) throw new Error('Não foi possível carregar os tipos de documento');
+  documentTypes = await readJsonResponse(res);
 }
 
 function renderTypesList() {
@@ -547,7 +608,7 @@ async function createDocumentType() {
 
   try {
     const res  = await apiFetch('/document-types', 'POST', { name, description: desc });
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) {
       errEl.textContent = data.error;
       errEl.classList.remove('hidden');
@@ -592,7 +653,7 @@ async function handleRegister(e) {
 
   try {
     const res  = await apiFetch('/register', 'POST', payload);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) {
       errEl.textContent = data.error || 'Erro ao cadastrar usuário';
       errEl.classList.remove('hidden');
@@ -688,20 +749,51 @@ function showToast(msg, type = 'success') {
 // ============================================================
 // API HELPER
 // ============================================================
+async function readJsonResponse(response) {
+  const body = await response.text();
+
+  if (!body.trim()) {
+    if (response.ok) {
+      throw new Error('O servidor retornou uma resposta vazia. Tente novamente.');
+    }
+    return {};
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new Error('O servidor retornou uma resposta inválida.');
+  }
+}
+
 async function apiFetch(path, method = 'GET', body = null, withAuth = true) {
   const headers = { 'Content-Type': 'application/json' };
   if (withAuth && token) headers['Authorization'] = `Bearer ${token}`;
 
-  const opts = { method, headers };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const opts = { method, headers, signal: controller.signal };
   if (body) opts.body = JSON.stringify(body);
 
-  const res = await fetch(`${API}${path}`, opts);
+  try {
+    const res = await fetch(`${API}${path}`, opts);
 
-  if (res.status === 401 || res.status === 403) {
-    logout();
-    throw new Error('Sessão expirada');
+    if (withAuth && (res.status === 401 || res.status === 403)) {
+      logout();
+      throw new Error('Sessão expirada. Entre novamente.');
+    }
+    return res;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('O servidor demorou para responder. Tente novamente.');
+    }
+    if (error instanceof TypeError) {
+      throw new Error('Não foi possível conectar ao servidor.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-  return res;
 }
 
 async function downloadAnexo(id) {
@@ -966,6 +1058,7 @@ window.confirmStatusChange = confirmStatusChange;
 window.createDocumentType  = createDocumentType;
 window.deleteDocumentType  = deleteDocumentType;
 window.resetNewDocumentForm = resetNewDocumentForm;
+<<<<<<< HEAD
 window.loadProcesses            = loadProcesses;
 window.applyProcessFilters      = applyProcessFilters;
 window.clearProcessFilters      = clearProcessFilters;
@@ -975,3 +1068,5 @@ window.openProcessStatusModal   = openProcessStatusModal;
 window.closeProcessStatusModal  = closeProcessStatusModal;
 window.confirmProcessStatusChange = confirmProcessStatusChange;
 window.resetNewProcessForm      = resetNewProcessForm;
+=======
+>>>>>>> 60fd1cdb5ca1d5a0c9366c7271397c334c86a9a0

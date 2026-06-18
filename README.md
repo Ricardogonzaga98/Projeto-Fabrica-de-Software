@@ -77,10 +77,10 @@ npm start       # produção
 ```
 
 ### 3. Frontend
-Abra `frontend/index.html` no navegador, ou sirva com um servidor estático:
-```bash
-npx serve frontend
-```
+Com o backend em execução, acesse `http://localhost:3001`.
+O frontend é servido pelo próprio Express e usa a API no mesmo endereço.
+Também é possível abrir `frontend/index.html` com o Live Server do VS Code;
+nesse caso, o frontend se conecta automaticamente à API na porta `3001`.
 
 ### 4. Testes
 ```bash

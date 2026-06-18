@@ -36,9 +36,6 @@ const upload = multer({
   }
 });
 
-const MAX_PROTOCOL_RETRIES = 5;
-
-// Gera protocolo único: SCED-YYYYMMDD-XXXX
 async function gerarProtocolo() {
   const hoje = new Date();
   const ano  = hoje.getFullYear();
@@ -47,20 +44,14 @@ async function gerarProtocolo() {
   const prefixoData = `${ano}${mes}${dia}`;
 
   const [rows] = await db.promise().query(
-    `SELECT COALESCE(MAX(CAST(RIGHT(protocol, 4) AS UNSIGNED)), 0) AS last_sequence
-     FROM documents WHERE protocol LIKE ?`,
+    'SELECT COUNT(*) as total FROM documents WHERE protocol LIKE ?',
     [`SCED-${prefixoData}-%`]
   );
 
-  const sequencial = String(rows[0].last_sequence + 1).padStart(4, '0');
+  const sequencial = String(rows[0].total + 1).padStart(4, '0');
   return `SCED-${prefixoData}-${sequencial}`;
 }
 
-function isDuplicateProtocolError(error) {
-  return error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062;
-}
-
-// GET /api/documents
 router.get('/documents', authenticateToken, async (req, res) => {
   const { protocol, sender, type, status, start_date, end_date, page = 1, limit = 10 } = req.query;
   const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -141,10 +132,9 @@ router.post('/documents', authenticateToken, upload.single('attachment'), async 
   }
 
   try {
-    let protocol;
-    let result;
+    const protocol = await gerarProtocolo();
+    const attachmentPath = req.file ? req.file.filename : null;
 
-<<<<<<< HEAD
     // Valida process_id se fornecido
     let validProcessId = null;
     if (process_id) {
@@ -162,26 +152,6 @@ router.post('/documents', authenticateToken, upload.single('attachment'), async 
        destination_sector || null, responsible || null, observations || null,
        attachmentPath, validProcessId, req.user.id]
     );
-=======
-    for (let attempt = 1; attempt <= MAX_PROTOCOL_RETRIES; attempt++) {
-      protocol = await gerarProtocolo();
-
-      try {
-        [result] = await db.promise().query(
-          `INSERT INTO documents
-            (protocol, type_id, received_date, sender, subject, destination_sector, responsible, observations, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [protocol, type_id || null, received_date, sender.trim(), subject.trim(),
-           destination_sector || null, responsible || null, observations || null, req.user.id]
-        );
-        break;
-      } catch (error) {
-        if (!isDuplicateProtocolError(error) || attempt === MAX_PROTOCOL_RETRIES) {
-          throw error;
-        }
-      }
-    }
->>>>>>> 60fd1cdb5ca1d5a0c9366c7271397c334c86a9a0
 
     await db.promise().query(
       `INSERT INTO document_history (document_id, user_id, action, new_status, notes)
