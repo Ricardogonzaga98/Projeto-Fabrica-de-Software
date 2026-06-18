@@ -15,7 +15,9 @@ const authRoutes         = require('./routes/auth');
 const documentRoutes     = require('./routes/documents');
 const documentTypeRoutes = require('./routes/documentTypes');
 const reportRoutes       = require('./routes/reports');
+const processRoutes = require('./routes/processes');
 
+app.use('/api', processRoutes);
 app.use('/api', authRoutes);
 app.use('/api', documentRoutes);
 app.use('/api', documentTypeRoutes);
