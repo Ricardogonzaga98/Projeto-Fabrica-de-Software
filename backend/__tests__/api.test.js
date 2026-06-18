@@ -53,6 +53,21 @@ describe('Health Check', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('OK');
     expect(res.body.message).toBeDefined();
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.headers.etag).toBeUndefined();
+  });
+});
+
+describe('Validação JSON', () => {
+  test('deve retornar JSON quando o corpo da requisição for inválido', async () => {
+    const res = await request(app)
+      .post('/api/login')
+      .set('Content-Type', 'application/json')
+      .send('{"email":');
+
+    expect(res.status).toBe(400);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.body.error).toBe('JSON inválido');
   });
 });
 
@@ -169,7 +184,7 @@ describe('POST /api/documents', () => {
   beforeEach(() => mockQuery.mockReset());
 
   test('T28.1 — deve criar documento e retornar protocolo', async () => {
-    mockQuery.mockResolvedValueOnce([[{ total: 0 }]]);   // COUNT para protocolo
+    mockQuery.mockResolvedValueOnce([[{ last_sequence: 0 }]]); // sequência para protocolo
     mockQuery.mockResolvedValueOnce([{ insertId: 10 }]); // INSERT documento
     mockQuery.mockResolvedValueOnce([{ insertId: 1 }]);  // INSERT histórico
 
@@ -185,6 +200,32 @@ describe('POST /api/documents', () => {
     expect(res.status).toBe(201);
     expect(res.body.protocol).toMatch(/^SCED-\d{8}-\d{4}$/);
     expect(res.body.id).toBe(10);
+  });
+
+  test('deve tentar um novo protocolo quando houver colisão', async () => {
+    const duplicateError = Object.assign(new Error('Duplicate entry'), {
+      code: 'ER_DUP_ENTRY',
+      errno: 1062
+    });
+
+    mockQuery.mockResolvedValueOnce([[{ last_sequence: 0 }]]);
+    mockQuery.mockRejectedValueOnce(duplicateError);
+    mockQuery.mockResolvedValueOnce([[{ last_sequence: 1 }]]);
+    mockQuery.mockResolvedValueOnce([{ insertId: 11 }]);
+    mockQuery.mockResolvedValueOnce([{ insertId: 2 }]);
+
+    const res = await request(app)
+      .post('/api/documents')
+      .set('Authorization', `Bearer ${AUTH_TOKEN}`)
+      .send({
+        received_date: '2025-06-01',
+        sender: 'Secretaria de Administração',
+        subject: 'Documento enviado simultaneamente'
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.protocol).toMatch(/-0002$/);
+    expect(res.body.id).toBe(11);
   });
 
   test('T28.2 — deve retornar 400 sem campos obrigatórios', async () => {

@@ -68,9 +68,6 @@
           <div id="login-error" class="alert alert-danger hidden"></div>
           <button type="submit" id="login-submit" class="btn btn-primary btn-full">Entrar</button>
         </form>
-        <div class="auth-hint">
-          <small>Admin padrão: <strong>admin@sced.com</strong> / <strong>admin123</strong></small>
-        </div>
       </div>
     </section>
 
@@ -327,7 +324,41 @@
       <div class="page-header">
         <h2>Administração</h2>
       </div>
-      <div class="admin-grid">
+
+      <div class="admin-menu" role="tablist" aria-label="Funções administrativas">
+        <button
+          type="button"
+          class="admin-menu-item active"
+          data-admin-section="types"
+          role="tab"
+          aria-controls="admin-section-types"
+          aria-selected="true">
+          <span class="admin-menu-icon">📁</span>
+          <span>
+            <strong>Tipos de Documento</strong>
+            <small>Adicionar, consultar e remover tipos</small>
+          </span>
+        </button>
+        <button
+          type="button"
+          class="admin-menu-item"
+          data-admin-section="users"
+          role="tab"
+          aria-controls="admin-section-users"
+          aria-selected="false">
+          <span class="admin-menu-icon">👤</span>
+          <span>
+            <strong>Cadastrar Usuário</strong>
+            <small>Criar operadores e administradores</small>
+          </span>
+        </button>
+      </div>
+
+      <div
+        id="admin-section-types"
+        class="admin-section"
+        data-admin-panel="types"
+        role="tabpanel">
         <div class="admin-card">
           <h3>Tipos de Documento</h3>
           <div class="form-row">
@@ -338,6 +369,13 @@
           <div id="admin-types-error" class="alert alert-danger hidden"></div>
           <ul id="types-list" class="types-list"></ul>
         </div>
+      </div>
+
+      <div
+        id="admin-section-users"
+        class="admin-section hidden"
+        data-admin-panel="users"
+        role="tabpanel">
         <div class="admin-card">
           <h3>Cadastrar Usuário</h3>
           <form id="register-form" novalidate>
