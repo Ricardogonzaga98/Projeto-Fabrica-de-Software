@@ -53,6 +53,21 @@ describe('Health Check', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('OK');
     expect(res.body.message).toBeDefined();
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.headers.etag).toBeUndefined();
+  });
+});
+
+describe('Validação JSON', () => {
+  test('deve retornar JSON quando o corpo da requisição for inválido', async () => {
+    const res = await request(app)
+      .post('/api/login')
+      .set('Content-Type', 'application/json')
+      .send('{"email":');
+
+    expect(res.status).toBe(400);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.body.error).toBe('JSON inválido');
   });
 });
 

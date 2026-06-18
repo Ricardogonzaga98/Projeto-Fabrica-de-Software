@@ -1,4 +1,10 @@
-const API = '/api';
+const isLocalFrontendServer =
+  ['localhost', '127.0.0.1'].includes(window.location.hostname) &&
+  window.location.port &&
+  window.location.port !== '3001';
+const API = window.location.protocol === 'file:' || isLocalFrontendServer
+  ? 'http://localhost:3001/api'
+  : '/api';
 const API_TIMEOUT_MS = 10000;
 
 // Estado global
@@ -111,7 +117,7 @@ async function handleLogin(e) {
 
   try {
     const res  = await apiFetch('/login', 'POST', { email, password }, false);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.error || 'Erro no login');
 
     token       = data.token;
@@ -162,7 +168,7 @@ function logout() {
 async function loadDashboard() {
   try {
     const res  = await apiFetch('/reports');
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) return;
 
     document.getElementById('stat-total').textContent      = data.totais.total;
@@ -187,7 +193,7 @@ async function loadDocuments(page = 1) {
 
   try {
     const res  = await apiFetch(`/documents?${params}`);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) return;
 
     const tbody = document.getElementById('documents-tbody');
@@ -258,7 +264,7 @@ async function handleNewDocument(e) {
 
   try {
     const res  = await apiFetch('/documents', 'POST', payload);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) {
       errEl.textContent = data.error || 'Erro ao registrar documento';
       errEl.classList.remove('hidden');
@@ -309,7 +315,7 @@ async function runConsult() {
 
   try {
     const res  = await apiFetch(`/documents?${params}`);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     const tbody = document.getElementById('consult-tbody');
     const empty = document.getElementById('consult-empty');
     tbody.innerHTML = '';
@@ -362,7 +368,7 @@ function buildReportParams() {
 async function generateReport() {
   try {
     const res  = await apiFetch(`/reports?${buildReportParams()}`);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) return;
 
     document.getElementById('rep-total').textContent      = data.totais.total;
@@ -416,8 +422,8 @@ async function viewDocument(id) {
       apiFetch(`/documents/${id}`),
       apiFetch(`/documents/${id}/history`)
     ]);
-    const doc  = await resDoc.json();
-    const hist = await resHist.json();
+    const doc  = await readJsonResponse(resDoc);
+    const hist = await readJsonResponse(resHist);
 
     document.getElementById('modal-title').textContent = `Documento — ${doc.protocol}`;
     document.getElementById('modal-body').innerHTML = `
@@ -481,7 +487,7 @@ async function confirmStatusChange() {
 
   try {
     const res  = await apiFetch(`/documents/${id}/status`, 'PUT', { status, notes });
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) {
       errEl.textContent = data.error || 'Erro ao atualizar status';
       errEl.classList.remove('hidden');
@@ -514,7 +520,7 @@ async function loadAdminPage() {
 async function loadDocumentTypes() {
   const res = await apiFetch('/document-types');
   if (!res.ok) throw new Error('Não foi possível carregar os tipos de documento');
-  documentTypes = await res.json();
+  documentTypes = await readJsonResponse(res);
 }
 
 function renderTypesList() {
@@ -545,7 +551,7 @@ async function createDocumentType() {
 
   try {
     const res  = await apiFetch('/document-types', 'POST', { name, description: desc });
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) {
       errEl.textContent = data.error;
       errEl.classList.remove('hidden');
@@ -590,7 +596,7 @@ async function handleRegister(e) {
 
   try {
     const res  = await apiFetch('/register', 'POST', payload);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) {
       errEl.textContent = data.error || 'Erro ao cadastrar usuário';
       errEl.classList.remove('hidden');
@@ -686,6 +692,23 @@ function showToast(msg, type = 'success') {
 // ============================================================
 // API HELPER
 // ============================================================
+async function readJsonResponse(response) {
+  const body = await response.text();
+
+  if (!body.trim()) {
+    if (response.ok) {
+      throw new Error('O servidor retornou uma resposta vazia. Tente novamente.');
+    }
+    return {};
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new Error('O servidor retornou uma resposta inválida.');
+  }
+}
+
 async function apiFetch(path, method = 'GET', body = null, withAuth = true) {
   const headers = { 'Content-Type': 'application/json' };
   if (withAuth && token) headers['Authorization'] = `Bearer ${token}`;
